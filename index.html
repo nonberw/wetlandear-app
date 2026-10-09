@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/vendor/leaflet.css">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -24,6 +25,7 @@
   <nav class="tabs" aria-label="Разделы">
     <button data-view="pulse" class="on"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-7 4 14 2.5-7H21"/></svg><span>Пульс</span></button>
     <button data-view="listen"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Слушать</span></button>
+    <button data-view="map"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span>Карта</span></button>
     <button data-view="review"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Проверка</span><b id="revCount" hidden>0</b></button>
     <button data-view="calendar"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Календарь</span></button>
     <button data-view="data"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg><span>Данные</span></button>
@@ -57,6 +59,7 @@
       <div class="cta">
         <button class="btn primary" data-go="listen">Записать или загрузить</button>
         <button class="btn" id="demoOn">Показать на демо</button>
+        <button class="btn" data-go="report">Утренний отчёт</button>
       </div>
     </div>
   </div>
@@ -167,6 +170,38 @@
   </div>
 </section>
 
+<!-- MAP -->
+<section id="v-map" class="view" aria-labelledby="h-map">
+  <h1 id="h-map">Карта</h1>
+  <p class="lead">Станции и события на местности. Размер круга показывает число событий, красным отмечены места с возможными тревогами.</p>
+  <div class="card">
+    <div class="map-tools">
+      <label>Период
+        <select id="mapPeriod"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="365">Год</option><option value="0">Всё время</option></select>
+      </label>
+      <span class="hint" id="mapInfo"></span>
+    </div>
+    <div id="map" role="application" aria-label="Карта станций"></div>
+    <p class="hint">Карта: © участники OpenStreetMap. Станции берутся из координат, которые вы указали в разделе «Данные».</p>
+  </div>
+</section>
+
+<!-- REPORT -->
+<section id="v-report" class="view" aria-labelledby="h-report">
+  <h1 id="h-report" class="no-print">Утро в заповеднике</h1>
+  <p class="lead no-print">Короткий отчёт за последние сутки или неделю. Читается за полминуты, делится в один клик.</p>
+  <div class="row wrap no-print">
+    <div class="seg" role="group" aria-label="Период отчёта"><button class="on" data-h="24">24 часа</button><button data-h="168">7 дней</button></div>
+  </div>
+  <div class="card paper" id="reportPaper"></div>
+  <div class="row wrap no-print">
+    <button class="btn primary" id="repCopy">Скопировать текст</button>
+    <button class="btn" id="repShare" hidden>Поделиться</button>
+    <a class="btn" id="repTg" target="_blank" rel="noopener">Telegram</a>
+    <button class="btn" id="repPrint">Печать / PDF</button>
+  </div>
+</section>
+
 <!-- PROFILE -->
 <section id="v-profile" class="view" aria-labelledby="h-profile">
   <h1 id="h-profile">Профиль</h1>
@@ -238,6 +273,11 @@
     <p class="status-row"><span class="chip wip">В разработке</span> карта станций, работа определения вида без интернета</p>
     <p class="status-row"><span class="chip plan">Запланировано</span> подключение станций ESP32-S3, утренний отчёт, дообучение на местных голосах</p>
   </div>
+  <div class="card" id="installCard" hidden>
+    <h2>Установить приложение</h2>
+    <p class="hint">Откроется как обычное приложение на телефоне или компьютере и будет работать без сети.</p>
+    <div class="row"><button class="btn primary" id="installBtn">Установить</button></div>
+  </div>
   <div class="card danger">
     <h2>Очистка</h2>
     <div class="row wrap"><button class="btn no" id="wipe">Удалить все данные на устройстве</button></div>
@@ -251,6 +291,8 @@
 <script src="js/dsp.js"></script>
 <script src="js/store.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/vendor/leaflet.js"></script>
 <script src="js/app.js"></script>
+<script src="js/extras.js"></script>
 </body>
 </html>

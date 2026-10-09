@@ -41,10 +41,10 @@
   function recRow(r) { return { id: r.id, name: r.name || null, started_at: r.start || null, duration: r.dur || null, station: r.station || null, lat: r.lat == null ? null : r.lat, lon: r.lon == null ? null : r.lon }; }
   function detRow(d) {
     return { id: d.id, rec_id: d.recId || null, ts: d.ts, t0: d.t0, t1: d.t1, f_low: d.fLow, f_high: d.fHigh, f_peak: d.fPeak, snr: d.snr, status: d.status, species: d.species || null,
-      suggest: d.suggest || null, station: d.station || null, lat: d.lat == null ? null : d.lat, lon: d.lon == null ? null : d.lon, reviewed_at: d.reviewed || null };
+      suggest: d.suggest || null, sound: d.sound || null, station: d.station || null, lat: d.lat == null ? null : d.lat, lon: d.lon == null ? null : d.lon, reviewed_at: d.reviewed || null };
   }
   function detFromRow(r) {
-    return { id: r.id, recId: r.rec_id, ts: r.ts, t0: r.t0, t1: r.t1, fLow: r.f_low, fHigh: r.f_high, fPeak: r.f_peak, snr: r.snr, status: r.status, species: r.species, suggest: r.suggest,
+    return { id: r.id, recId: r.rec_id, ts: r.ts, t0: r.t0, t1: r.t1, fLow: r.f_low, fHigh: r.f_high, fPeak: r.f_peak, snr: r.snr, status: r.status, species: r.species, suggest: r.suggest, sound: r.sound,
       station: r.station, lat: r.lat, lon: r.lon, reviewed: r.reviewed_at, clip: 'cloud' };
   }
   function recFromRow(r) { return { id: r.id, name: r.name, start: r.started_at, dur: r.duration, station: r.station, lat: r.lat, lon: r.lon }; }

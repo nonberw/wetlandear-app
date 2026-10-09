@@ -2,6 +2,7 @@
 Returns the top species per window. The result is a suggestion: a person confirms it in the app."""
 from http.server import BaseHTTPRequestHandler
 import base64
+import csv
 import json
 import os
 import time
@@ -48,8 +49,30 @@ def _load():
     clf.allocate_tensors()
     meta = Interpreter(model_path=os.path.join(ROOT, 'birdnet_v2.4_meta_fp16.tflite'))
     meta.allocate_tensors()
-    _state.update(labels=labels, clf=clf, meta=meta)
+    yam = Interpreter(model_path=os.path.join(ROOT, 'yamnet.tflite'))
+    yam.allocate_tensors()
+    with open(os.path.join(ROOT, 'yamnet_class_map.csv'), encoding='utf-8') as f:
+        names = [r['display_name'] for r in csv.DictReader(f)]
+    _state.update(labels=labels, clf=clf, meta=meta, yam=yam, ynames=names, groups=_groups(names))
     return _state
+
+
+def _idx(names, *wanted):
+    return [i for i, n in enumerate(names) if n in wanted]
+
+
+def _groups(names):
+    """Sound classes of YAMNet grouped into what matters for a wetland reserve."""
+    return {
+        'animal': _idx(names, 'Animal', 'Wild animals', 'Bird', 'Bird vocalization, bird call, bird song', 'Bird flight, flapping wings', 'Frog',
+                       'Insect', 'Cricket', 'Chirp, tweet', 'Squawk', 'Owl', 'Crow', 'Caw', 'Duck', 'Goose', 'Quack', 'Honk', 'Pigeon, dove', 'Coo', 'Hoot', 'Turkey', 'Gobble'),
+        'weather': _idx(names, 'Wind', 'Wind noise (microphone)', 'Rain', 'Raindrop', 'Rain on surface', 'Thunderstorm', 'Thunder', 'Rustling leaves', 'Stream', 'Waves, surf'),
+        'speech': _idx(names, 'Speech', 'Child speech, kid speaking', 'Conversation', 'Hubbub, speech noise, speech babble', 'Shout', 'Yell', 'Laughter'),
+        'gun': _idx(names, 'Gunshot, gunfire', 'Machine gun', 'Fusillade', 'Artillery fire', 'Explosion', 'Cap gun'),
+        'engine': _idx(names, 'Engine', 'Light engine (high frequency)', 'Medium engine (mid frequency)', 'Heavy engine (low frequency)', 'Motor vehicle (road)',
+                       'Motorboat, speedboat', 'Motorcycle', 'Chainsaw', 'Lawn mower', 'Engine knocking', 'Idling', 'Accelerating, revving, vroom'),
+        'dog': _idx(names, 'Dog', 'Bark', 'Howl', 'Canidae, dogs, wolves'),
+    }
 
 
 def _run(interp, x):
@@ -58,6 +81,18 @@ def _run(interp, x):
     interp.set_tensor(i['index'], x)
     interp.invoke()
     return interp.get_tensor(o['index'])[0].copy()
+
+
+def sound_type(window):
+    """What kind of sound is at the center of a 3 s window (YAMNet, 0.975 s at 16 kHz)."""
+    s = _load()
+    x16 = window.reshape(-1, 3).mean(axis=1).astype('float32')       # 48 kHz -> 16 kHz
+    c = len(x16) // 2
+    seg = x16[c - 7800:c + 7800]
+    scores = _run(s['yam'], seg)
+    top = np.argsort(-scores)[:3]
+    g = {k: round(float(scores[v].max()), 3) if v else 0.0 for k, v in s['groups'].items()}
+    return {'top': [{'name': s['ynames'][i], 'score': round(float(scores[i]), 3)} for i in top if scores[i] >= 0.1], 'groups': g}
 
 
 def identify(windows, lat, lon):
@@ -70,13 +105,14 @@ def identify(windows, lat, lon):
         conf = 1.0 / (1.0 + np.exp(-np.clip(logits, -15, 15)))
         conf = np.where(plausible, conf, 0.0)
         top = np.argsort(-conf)[:5]
+        snd = sound_type(w)
         items = []
         for k in top:
             if conf[k] < 0.05:
                 continue
             sci, _, common = s['labels'][k].partition('_')
             items.append({'sci': sci, 'common': common, 'conf': round(float(conf[k]), 3)})
-        out.append(items)
+        out.append({'species': items, 'sound': snd})
     return out
 
 

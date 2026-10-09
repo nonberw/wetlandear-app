@@ -114,7 +114,8 @@
     var ids = ['gru_gru', 'ant_vir', 'ans_ans', 'cyg_cyg', 'pho_ros', 'pel_cri', 'lar_ich', 'ful_atr', 'aro_aru', 'lus_sve', 'ala_arv', 'van_van'];
     var firstDay = { gru_gru: 70, ant_vir: 52, ans_ans: 74, cyg_cyg: 66, pho_ros: 34, pel_cri: 40, lar_ich: 28, ful_atr: 60, aro_aru: 22, lus_sve: 30, ala_arv: 68, van_van: 58 };
     var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
-    var rec = { id: 'demo-rec', name: 'Демо-данные', start: new Date().toISOString(), dur: 0, station: 'Демо-станция', lat: 50.6, lon: 69.0, demo: true };
+    var rec = { id: 'demo-rec', name: 'Демо-данные', start: new Date().toISOString(), dur: 0, station: 'Демо-станция 1', lat: 50.6, lon: 69.0, demo: true };
+    var DS = [['Демо-станция 1', 50.6, 69.0], ['Демо-станция 2', 50.52, 69.14], ['Демо-станция 3', 50.72, 68.86]];
     state.recs.push(rec);
     var now = Date.now();
     for (var day = 75; day >= 0; day--) {
@@ -123,8 +124,10 @@
         var s = ids[Math.floor(rnd() * ids.length)];
         if (75 - day < firstDay[s]) continue;
         var t = now - day * 864e5 - rnd() * 864e5 * .8;
-        var conf = rnd() < .78;
-        state.dets.push({ id: uid('d'), recId: 'demo-rec', t0: 0, t1: 1.2, fLow: 1500, fHigh: 4200, fPeak: 2600, snr: 15, status: conf ? 'confirmed' : 'auto', species: conf ? s : null, ts: new Date(t).toISOString(), station: 'Демо-станция', lat: 50.6, lon: 69.0, demo: true });
+        var conf = rnd() < .78, st = DS[Math.floor(rnd() * 3)];
+        if (st === DS[2] && now - t < 30 * 36e5) continue;
+        var sound = rnd() < .03 ? { top: [], groups: { animal: 0.1, weather: 0, speech: 0, gun: rnd() < .5 ? 0.62 : 0, engine: 0.55, dog: 0 } } : null;
+        state.dets.push({ id: uid('d'), recId: 'demo-rec', t0: 0, t1: 1.2, fLow: 1500, fHigh: 4200, fPeak: 2600, snr: 15, status: conf ? 'confirmed' : 'auto', species: conf ? s : null, ts: new Date(t).toISOString(), station: st[0], lat: st[1], lon: st[2], demo: true, sound: sound });
       }
     }
     save();
@@ -160,8 +163,57 @@
   function importJSON(txt) { var s = JSON.parse(txt); if (!s || !Array.isArray(s.dets) || !Array.isArray(s.recs)) throw new Error('bad'); state = s; save(); }
   function wipe() { state.dets.forEach(function (d) { if (d.clip) delClip(d.id); }); state = blank(); save(); }
 
+
+  /* ---------- trust levels, sound kinds, threats ---------- */
+  /* event found -> model suggests -> human confirmed -> reference (human and model agree) */
+  function level(d) {
+    if (d.status === 'rejected') return 'rejected';
+    if (d.status === 'confirmed') return (d.suggest && d.species && sugId(d.suggest) === d.species && d.suggest.conf >= .7) ? 'reference' : 'human';
+    return d.suggest ? 'model' : 'event';
+  }
+  function soundKind(d) {
+    var g = d.sound && d.sound.groups; if (!g) return null;
+    if (g.animal >= .3) return 'animal'; if (g.weather >= .5) return 'weather'; if (g.speech >= .5) return 'speech'; if (g.dog >= .5) return 'dog'; return null;
+  }
+  function threatOf(d) {
+    var g = d.sound && d.sound.groups; if (!g) return null;
+    if (g.gun >= .35) return { kind: 'gun', score: g.gun };
+    if (g.engine >= .5 && g.animal < .5) return { kind: 'engine', score: g.engine };
+    return null;
+  }
+
+  /* ---------- stations on the map ---------- */
+  function stationStats(fromMs) {
+    var m = {};
+    state.dets.forEach(function (d) {
+      if (d.lat == null || d.lon == null || d.status === 'rejected' || +new Date(d.ts) < fromMs) return;
+      var k = d.station + '|' + d.lat + '|' + d.lon;
+      var r = m[k] || (m[k] = { name: d.station, lat: d.lat, lon: d.lon, n: 0, species: {}, demo: !!d.demo, threats: 0 });
+      r.n++; if (d.status === 'confirmed' && d.species) r.species[d.species] = (r.species[d.species] || 0) + 1; if (threatOf(d)) r.threats++;
+    });
+    return Object.keys(m).map(function (k) { return m[k]; });
+  }
+
+  /* ---------- morning report ---------- */
+  function report(hours) {
+    var now = Date.now(), from = now - hours * 36e5, prevFrom = from - hours * 36e5;
+    var live = state.dets.filter(function (d) { return d.status !== 'rejected'; });
+    var cur = live.filter(function (d) { var t = +new Date(d.ts); return t >= from && t <= now; });
+    var firstSeen = {};
+    state.dets.forEach(function (d) { if (d.status === 'confirmed' && d.species) { var t = +new Date(d.ts); if (!(firstSeen[d.species] <= t)) firstSeen[d.species] = t; } });
+    var counts = {}; cur.forEach(function (d) { if (d.status === 'confirmed' && d.species) counts[d.species] = (counts[d.species] || 0) + 1; });
+    var species = Object.keys(counts).map(function (id) { return { id: id, n: counts[id] }; }).sort(function (a, b) { return b.n - a.n; });
+    var fresh = species.filter(function (s) { return firstSeen[s.id] >= from; }).map(function (s) { return s.id; });
+    var threats = cur.filter(function (d) { return threatOf(d); }).sort(function (a, b) { return a.ts < b.ts ? 1 : -1; });
+    var activeNow = {}, activeBefore = {};
+    live.forEach(function (d) { var t = +new Date(d.ts), k = d.station || '?'; if (t >= from) activeNow[k] = 1; else activeBefore[k] = 1; });
+    var silent = Object.keys(activeBefore).filter(function (k) { return !activeNow[k]; });
+    return { hours: hours, from: from, to: now, events: cur.length, confirmed: cur.filter(function (d) { return d.status === 'confirmed'; }).length, species: species, fresh: fresh,
+      threats: threats, silent: silent, pulse: pulseFor(from, now + 1), prev: pulseFor(prevFrom, from), demo: cur.some(function (d) { return d.demo; }) };
+  }
+
   window.WEStore = {
-    SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, get: function () { return state; }, save: save,
+    SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, level: level, soundKind: soundKind, threatOf: threatOf, stationStats: stationStats, report: report, get: function () { return state; }, save: save,
     addRecording: addRecording, setStatus: setStatus, getClip: getClip, pulse: pulse, perDay: perDay, dayKey: dayKey, seasonTable: seasonTable,
     seedDemo: seedDemo, clearDemo: clearDemo, hasDemo: hasDemo,
     exportLog: exportLog, exportDwC: exportDwC, exportJSON: exportJSON, importJSON: importJSON, wipe: wipe

@@ -49,6 +49,7 @@
     if (view === 'calendar') renderCalendar();
     if (view === 'data') renderData();
     if (view === 'profile') renderProfile();
+    if (window.WEX) window.WEX.onShow(view);
   }
   $$('.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
   $$('[data-go]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.go); }); });
@@ -58,6 +59,17 @@
     $('#demoBanner').hidden = !S.hasDemo();
     $('#signBanner').hidden = !!(window.WESync && WESync.me()) || !(window.WESync && WESync.ready());
     var n = reviewQueue().length, b = $('#revCount'); b.textContent = n > 99 ? '99+' : n; b.hidden = !n;
+  }
+
+  /* ---------- trust level and sound badges ---------- */
+  var LVL = { reference: ['эталон', 'ok'], human: ['подтверждено человеком', 'ok'], model: ['модель предполагает', 'mod'], event: ['событие найдено', ''], rejected: ['ошибка', ''] };
+  function lvlBadge(d, all) { var l = S.level(d); if (!all && (l === 'event' || l === 'model')) return ''; var t = LVL[l]; return '<span class="badge ' + t[1] + '">' + t[0] + '</span>'; }
+  var SK = { animal: 'животное, птица', weather: 'похоже на ветер или дождь', speech: 'речь человека', dog: 'собака' };
+  function sndHtml(e) {
+    var h = '', k = S.soundKind(e), th = S.threatOf(e);
+    if (th) h += '<span class="snd threat">⚠ ' + (th.kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') + ' ' + Math.round(th.score * 100) + '%</span>';
+    if (k) h += '<span class="snd ' + (k === 'animal' ? '' : 'mute') + '">' + SK[k] + '</span>';
+    return h ? '<div class="sndrow">' + h + '</div>' : '';
   }
 
   /* ---------- pulse ---------- */
@@ -90,8 +102,9 @@
     }
     var dets = S.get().dets.filter(function (d) { return d.status !== 'rejected'; }).sort(function (a, b) { return a.ts < b.ts ? 1 : -1; }).slice(0, 8);
     $('#recent').innerHTML = dets.length ? dets.map(function (d) {
-      return '<li><span class="dotk ' + d.status + '"></span><span class="nm">' + esc(spName(d.species) || 'Звуковое событие') + (d.demo ? '<span class="badge">демо</span>' : '') + '</span><span class="tm">' + fmtDT(d.ts) + '</span></li>';
+      return '<li><span class="dotk ' + d.status + '"></span><span class="nm">' + esc(spName(d.species) || 'Звуковое событие') + (d.demo ? '<span class="badge">демо</span>' : '') + lvlBadge(d, true) + '</span><span class="tm">' + fmtDT(d.ts) + '</span></li>';
     }).join('') : '<li><span class="hint">Пока пусто.</span></li>';
+    if (window.WEX) window.WEX.afterPulse();
   }
   $('#demoOn').addEventListener('click', function () { S.seedDemo(); renderPulse(); toast('Демо-данные добавлены'); });
   $('#demoOff').addEventListener('click', function () { S.clearDemo(); show(current); toast('Демо убрано'); });
@@ -168,9 +181,9 @@
     }).join('');
     var ul = $('#events');
     ul.innerHTML = evs.map(function (e, i) {
-      var nm = spName(e.species), st = e.status === 'confirmed' ? '<span class="badge ok">подтверждено человеком</span>' : e.status === 'rejected' ? '<span class="badge">ошибка</span>' : '';
+      var nm = spName(e.species), st = lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug" data-a="sug" data-k="' + k + '" title="' + esc(s.sci) + '">' + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug" data-a="sug" data-k="' + k + '" title="' + esc(s.sci) + '">' + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
         '<div class="acts"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
@@ -198,7 +211,7 @@
         var part = evs.slice(from, from + 10);
         return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + WESync.token() }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (e) { return b64(windowFor(e)); }) }) })
           .then(function (r) { if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; } if (!r.ok) throw new Error('http'); return r.json(); })
-          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (items, k) { part[k].suggest = items.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); }); renderEvents(); });
+          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (it, k) { part[k].suggest = it.species.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); part[k].sound = it.sound || null; }); renderEvents(); });
       }).catch(function (e) { failed = e && e.auth ? 'auth' : true; });
     })(from);
     chain.then(function () { if (seq !== idSeq) return; setIdState(failed === 'auth' ? 'Сессия истекла. Войдите снова, чтобы получить подсказки.' : failed ? 'Подсказки модели недоступны сейчас. Выберите вид сами.' : 'Подсказки модели BirdNET готовы. Проверяйте их на слух и по спектрограмме.'); });
@@ -255,7 +268,7 @@
       for (var i = 0; i < out.length; i++) { var x = Math.max(-1, Math.min(1, sess.samples[a + i])); out[i] = x < 0 ? x * 32768 : x * 32767; }
       return out;
     });
-    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, suggest: e.suggest && e.suggest[0] ? { sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
+    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, suggest: e.suggest && e.suggest[0] ? { sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
     S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
     toast('Сохранено: ' + evs.length + ' ' + plural(evs.length, 'событие', 'события', 'событий'));
@@ -307,7 +320,7 @@
     if (empty) { if (queue.length) $('#revEmpty b').textContent = 'Очередь закончилась'; else $('#revEmpty b').textContent = 'Очередь пуста'; return; }
     var d = queue[qi]; curClip = null;
     $('#revPos').textContent = (qi + 1) + ' из ' + queue.length;
-    $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + d.station + ' · ' + (d.fLow / 1000).toFixed(1) + ' до ' + (d.fHigh / 1000).toFixed(1) + ' кГц · +' + d.snr + ' дБ · ' + D.describe(d);
+    $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + d.station + ' · ' + (d.fLow / 1000).toFixed(1) + ' до ' + (d.fHigh / 1000).toFixed(1) + ' кГц · +' + d.snr + ' дБ · ' + D.describe(d) + (S.threatOf(d) ? ' · ⚠ ' + (S.threatOf(d).kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') : S.soundKind(d) && S.soundKind(d) !== 'animal' ? ' · ' + SK[S.soundKind(d)] : '');
     var sel = $('#revSel'); speciesOptions(sel, true);
     if (d.suggest) {
       var gid = S.sugId(d.suggest);
@@ -459,5 +472,5 @@
   /* ---------- start ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () { });
   show((location.hash || '#pulse').slice(1));
-  window.WEApp = { analyze: analyze, show: show };
+  window.WEApp = { analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, current: function () { return current; } };
 })();
