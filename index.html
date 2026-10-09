@@ -176,6 +176,13 @@
 <section id="v-log" class="view" aria-labelledby="h-log">
   <h1 id="h-log">Журнал</h1>
   <p class="lead">Все ваши события в одном месте. Ищите по виду, станции или дате, фильтруйте, прослушивайте и исправляйте решения.</p>
+  <div class="card" id="askCard">
+    <h2>Спросить журнал</h2>
+    <p class="hint">Задайте вопрос обычными словами, ИИ ответит по вашему журналу.</p>
+    <div class="ask-row"><input id="askQ" type="text" maxlength="400" placeholder="Ваш вопрос" autocomplete="off" enterkeyhint="send"><button class="btn primary" id="askBtn">Спросить</button></div>
+    <div class="chips" id="askChips"><button>Какие виды пели чаще всего за месяц?</button><button>В какое время суток активность выше всего?</button><button>Были ли тревоги и где?</button></div>
+    <div class="ask-out" id="askOut" hidden></div>
+  </div>
   <div class="card">
     <label class="srch"><span class="sr-only">Поиск</span><input id="logQ" type="search" placeholder="Поиск: вид, станция, дата" autocomplete="off" enterkeyhint="search"></label>
     <div class="chips" id="logChips" role="group" aria-label="Фильтр по статусу">

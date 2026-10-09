@@ -71,6 +71,11 @@
       "maxDuration": 30,
       "memory": 512,
       "includeFiles": "lib/**"
+    },
+    "api/ask.py": {
+      "maxDuration": 60,
+      "memory": 512,
+      "includeFiles": "lib/**"
     }
   },
   "crons": [

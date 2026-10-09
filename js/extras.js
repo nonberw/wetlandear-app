@@ -230,8 +230,26 @@
       var src = actx.createBufferSource(); src.buffer = b; src.connect(actx.destination); src.start();
     });
   }
+  /* ask the journal (Claude, answers only from a summary of your own journal) */
+  function askRun(q) {
+    var out = $('#askOut'), btn = $('#askBtn'); q = (q || '').trim();
+    if (q.length < 3) { A.toast(T('Напишите вопрос')); return; }
+    if (!window.WESync || !WESync.token()) { out.hidden = false; out.textContent = T('Войдите через Google, чтобы задавать вопросы журналу.'); return; }
+    out.hidden = false; out.textContent = T('Думаю...'); btn.disabled = true;
+    fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + WESync.token() }, body: JSON.stringify({ question: q, lang: window.WEi18n ? window.WEi18n.lang : 'ru' }) })
+      .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }); })
+      .then(function (r) {
+        if (r.s === 200) { out.innerHTML = ''; var p = document.createElement('div'); p.className = 'ask-a'; p.textContent = r.j.answer; var h = document.createElement('div'); h.className = 'hint'; h.textContent = T('Ответ даёт ИИ по сводке вашего журнала. Важные цифры проверьте в списке ниже.'); out.appendChild(p); out.appendChild(h); }
+        else if (r.s === 503) out.textContent = T('Эта функция ещё не включена администратором.');
+        else if (r.s === 429) out.textContent = T('На сегодня лимит вопросов исчерпан. Попробуйте завтра.');
+        else out.textContent = T('Не удалось получить ответ. Попробуйте ещё раз.');
+      }).catch(function () { out.textContent = T('Не удалось получить ответ. Попробуйте ещё раз.'); }).then(function () { btn.disabled = false; });
+  }
   function initLog() {
     if (logInit) return; logInit = true;
+    $('#askBtn').addEventListener('click', function () { askRun($('#askQ').value); });
+    $('#askQ').addEventListener('keydown', function (e) { if (e.key === 'Enter') askRun(this.value); });
+    $('#askChips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; $('#askQ').value = b.textContent; askRun(b.textContent); });
     $('#logQ').addEventListener('input', function () { clearTimeout(logTimer); logTimer = setTimeout(function () { logPage = 40; renderLog(); }, 150); });
     $('#logChips').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return; logF = b.dataset.f; logPage = 40;
