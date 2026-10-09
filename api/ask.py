@@ -57,7 +57,7 @@ SYSTEM = ("You are the assistant inside WetlandEar, an acoustic bird monitoring 
 
 
 def ask_claude(question, data, lang):
-    key = os.environ.get('ANTHROPIC_API_KEY', '')
+    key = os.environ.get('ANTHROPIC_API_KEY', '').strip()   # a pasted key often carries a hidden newline or space
     if not key:
         return None, 'not configured'
     body = {'model': MODEL, 'max_tokens': 600, 'system': SYSTEM,
@@ -78,8 +78,8 @@ def ask_claude(question, data, lang):
         except Exception:
             msg = ''
         return None, 'upstream %d %s' % (e.code, msg)
-    except Exception:
-        return None, 'upstream error'
+    except Exception as e:
+        return None, 'upstream error: %s' % type(e).__name__
 
 
 class handler(BaseHTTPRequestHandler):
