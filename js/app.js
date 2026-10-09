@@ -181,7 +181,7 @@
     }).join('');
     var ul = $('#events');
     ul.innerHTML = evs.map(function (e, i) {
-      var nm = spName(e.species), st = lvlBadge(e);
+      var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">модель ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
         (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug" data-a="sug" data-k="' + k + '" title="' + esc(s.sci) + '">' + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
@@ -190,7 +190,15 @@
     $$('#events select').forEach(function (s, i) { speciesOptions(s, true); var sp = evs[i].species; if (sp) { if (!S.species[sp]) { var o = document.createElement('option'); o.value = sp; o.textContent = spName(sp); s.insertBefore(o, s.lastChild); } s.value = sp; } });
   }
   /* species suggestions from BirdNET running on our server; always a suggestion, never an observation */
-  var idTimer = 0, idSeq = 0, SUGMIN = .2;
+  var idTimer = 0, idSeq = 0, SUGMIN = .2, AUTOMIN = .3;
+  /* Fill the species in automatically unless a person already decided, or the sound looks like wind, rain or speech. */
+  function autoPick(ev) {
+    var sg = ev.suggest && ev.suggest[0];
+    if (!sg || ev.status !== 'auto' || ev.species || sg.conf < AUTOMIN) return;
+    var kind = S.soundKind(ev);
+    if ((kind === 'weather' || kind === 'speech') && sg.conf < .6) return;
+    ev.species = S.sugId(sg); ev.auto = true; ev.autoConf = sg.conf;
+  }
   function scheduleIdentify(delay) { clearTimeout(idTimer); idTimer = setTimeout(runIdentify, delay); }
   function setIdState(t) { var el = $('#idState'); if (el) el.textContent = t || ''; }
   function windowFor(e) {
@@ -211,7 +219,7 @@
         var part = evs.slice(from, from + 10);
         return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + WESync.token() }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (e) { return b64(windowFor(e)); }) }) })
           .then(function (r) { if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; } if (!r.ok) throw new Error('http'); return r.json(); })
-          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (it, k) { part[k].suggest = it.species.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); part[k].sound = it.sound || null; }); renderEvents(); });
+          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (it, k) { part[k].suggest = it.species.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); part[k].sound = it.sound || null; autoPick(part[k]); }); renderEvents(); });
       }).catch(function (e) { failed = e && e.auth ? 'auth' : true; });
     })(from);
     chain.then(function () { if (seq !== idSeq) return; setIdState(failed === 'auth' ? 'Сессия истекла. Войдите снова, чтобы получить подсказки.' : failed ? 'Подсказки модели недоступны сейчас. Выберите вид сами.' : 'Подсказки модели BirdNET готовы. Проверяйте их на слух и по спектрограмме.'); });
@@ -241,7 +249,7 @@
     if (a === 'play') { selectEvent(i, true); return; }
     var chip = e.target.closest('[data-a="sug"]');
     if (chip) {
-      var sg = ev.suggest[+chip.dataset.k], sid = S.sugId(sg); ev.species = sid; sess.saved = false; renderEvents();
+      var sg = ev.suggest[+chip.dataset.k], sid = S.sugId(sg); ev.species = sid; ev.auto = true; ev.autoConf = sg.conf; sess.saved = false; renderEvents();
       var nl = $('#events [data-i="' + i + '"]'); toast('Выбрано: ' + S.sugName(sg) + '. Нажмите «Верно», если согласны'); if (nl) $('select', nl).focus({ preventScroll: true }); return;
     }
     if (a === 'yes') {
@@ -249,11 +257,11 @@
       if (!id) { toast('Сначала выберите вид'); sel.focus(); return; }
       ev.species = id; ev.status = 'confirmed'; sess.saved = false; renderEvents(); toast('Подтверждено: ' + spName(id)); return;
     }
-    if (a === 'no') { ev.status = 'rejected'; ev.species = null; sess.saved = false; renderEvents(); return; }
+    if (a === 'no') { ev.status = 'rejected'; ev.species = null; ev.auto = false; sess.saved = false; renderEvents(); return; }
   });
   $('#events').addEventListener('change', function (e) {
     if (e.target.dataset.a !== 'sp') return;
-    var li = e.target.closest('.evc'), ev = sess.events[+li.dataset.i], id = pickSpecies(e.target); if (id) ev.species = id;
+    var li = e.target.closest('.evc'), ev = sess.events[+li.dataset.i], id = pickSpecies(e.target); if (id) { ev.species = id; ev.auto = false; }
   });
   $('#sens').addEventListener('input', function () {
     if (!sess) { $('#sensVal').textContent = this.value + ' дБ'; return; }
