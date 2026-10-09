@@ -4,7 +4,11 @@ from http.server import BaseHTTPRequestHandler
 import hmac
 import json
 
-import _tg as T
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
+import tg as T  # noqa: E402
 
 
 def run_all():

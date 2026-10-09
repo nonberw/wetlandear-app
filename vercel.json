@@ -64,11 +64,13 @@
     },
     "api/morning.py": {
       "maxDuration": 60,
-      "memory": 512
+      "memory": 512,
+      "includeFiles": "lib/**"
     },
     "api/telegram.py": {
       "maxDuration": 30,
-      "memory": 512
+      "memory": 512,
+      "includeFiles": "lib/**"
     }
   },
   "crons": [
