@@ -97,6 +97,20 @@
   }
   function status() { return { busy: busy, last: lastSync }; }
 
-  window.WESync = { init: init, ready: ready, onChange: onChange, signIn: signIn, signOut: signOut, me: me, token: token, getProfile: getProfile, saveProfile: saveProfile,
+  /* ---------- Telegram morning report ---------- */
+  function tgGet() { return sb.from('telegram_links').select('chat_id,enabled,lang,code').eq('user_id', user.id).maybeSingle().then(function (r) { if (r.error) throw r.error; return r.data; }); }
+  function tgCode() { var a = new Uint8Array(12); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+  function tgConnect(lang) {
+    var code = tgCode();
+    return sb.from('telegram_links').upsert({ user_id: user.id, code: code, enabled: true, lang: lang || 'ru' }, { onConflict: 'user_id' }).then(function (r) { if (r.error) throw r.error; return code; });
+  }
+  function tgSet(patch) { return sb.from('telegram_links').update(patch).eq('user_id', user.id).then(function (r) { if (r.error) throw r.error; }); }
+  function tgRemove() { return sb.from('telegram_links').delete().eq('user_id', user.id).then(function (r) { if (r.error) throw r.error; }); }
+  function tgTest() {
+    return fetch('/api/morning', { method: 'POST', headers: { Authorization: 'Bearer ' + token() } }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); });
+  }
+
+  window.WESync = {
+    tgGet: tgGet, tgConnect: tgConnect, tgSet: tgSet, tgRemove: tgRemove, tgTest: tgTest, init: init, ready: ready, onChange: onChange, signIn: signIn, signOut: signOut, me: me, token: token, getProfile: getProfile, saveProfile: saveProfile,
     syncNow: syncNow, pushDet: pushDet, pushAll: pushAll, uploadClip: uploadClip, downloadClip: downloadClip, status: status };
 })();

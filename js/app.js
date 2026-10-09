@@ -8,8 +8,11 @@
   function pad(n) { return ('0' + n).slice(-2); }
   function fmtDT(iso) { var d = new Date(iso); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
   function fmtD(d) { return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear(); }
-  function plural(n, a, b, c) { var m = n % 10, h = n % 100; return (m === 1 && h !== 11) ? a : (m >= 2 && m <= 4 && (h < 10 || h >= 20)) ? b : c; }
-  function spName(id) { if (!id) return null; var s = S.species[id]; return s ? s.ru : String(id).replace(/^x:/, ''); }
+  var T = function (s, v) { return window.WEi18n ? window.WEi18n.t(s, v) : s; };
+  var PLEN = { 'событие': ['event', 'events'], 'подтверждённый вид': ['confirmed species', 'confirmed species'], 'фрагменту': ['fragment', 'fragments'], 'образец': ['sample', 'samples'] };
+  function plural(n, a, b, c) {
+    if (window.WEi18n && window.WEi18n.lang === 'en' && PLEN[a]) return n === 1 ? PLEN[a][0] : PLEN[a][1]; var m = n % 10, h = n % 100; return (m === 1 && h !== 11) ? a : (m >= 2 && m <= 4 && (h < 10 || h >= 20)) ? b : c; }
+  function spName(id) { return id ? S.nameOf(id) : null; }
   function toast(msg) {
     var t = $('#toast'); t.textContent = msg; t.hidden = false; t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
     clearTimeout(toast.h); toast.h = setTimeout(function () { t.hidden = true; }, 2600);
@@ -20,13 +23,13 @@
   }
   function speciesOptions(sel, withBlank) {
     var h = withBlank ? '<option value="">Выберите вид</option>' : '';
-    S.SPECIES.forEach(function (s) { h += '<option value="' + s[0] + '">' + esc(s[1]) + '</option>'; });
+    S.SPECIES.forEach(function (s) { h += '<option value="' + s[0] + '">' + esc(S.nameOf(s[0])) + '</option>'; });
     h += '<option value="__other">Другой вид...</option>';
     sel.innerHTML = h;
   }
   function pickSpecies(sel) {
     if (sel.value === '__other') {
-      var t = (prompt('Название вида') || '').trim().slice(0, 60);
+      var t = (prompt(T('Название вида')) || '').trim().slice(0, 60);
       if (!t) { sel.value = ''; return null; }
       var id = 'x:' + t;
       if (!sel.querySelector('option[value="' + id.replace(/"/g, '') + '"]')) { var o = document.createElement('option'); o.value = id; o.textContent = t; sel.insertBefore(o, sel.lastChild); }
@@ -63,12 +66,12 @@
 
   /* ---------- trust level and sound badges ---------- */
   var LVL = { reference: ['эталон', 'ok'], human: ['подтверждено человеком', 'ok'], model: ['модель предполагает', 'mod'], event: ['событие найдено', ''], rejected: ['ошибка', ''] };
-  function lvlBadge(d, all) { var l = S.level(d); if (!all && (l === 'event' || l === 'model')) return ''; var t = LVL[l]; return '<span class="badge ' + t[1] + '">' + t[0] + '</span>'; }
+  function lvlBadge(d, all) { var l = S.level(d); if (!all && (l === 'event' || l === 'model')) return ''; var t = LVL[l]; return '<span class="badge ' + t[1] + '">' + esc(T(t[0])) + '</span>'; }
   var SK = { animal: 'животное, птица', weather: 'похоже на ветер или дождь', speech: 'речь человека', dog: 'собака' };
   function sndHtml(e) {
     var h = '', k = S.soundKind(e), th = S.threatOf(e);
-    if (th) h += '<span class="snd threat">⚠ ' + (th.kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') + ' ' + Math.round(th.score * 100) + '%</span>';
-    if (k) h += '<span class="snd ' + (k === 'animal' ? '' : 'mute') + '">' + SK[k] + '</span>';
+    if (th) h += '<span class="snd threat">⚠ ' + T(th.kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') + ' ' + Math.round(th.score * 100) + '%</span>';
+    if (k) h += '<span class="snd ' + (k === 'animal' ? '' : 'mute') + '">' + esc(T(SK[k])) + '</span>';
     return h ? '<div class="sndrow">' + h + '</div>' : '';
   }
 
@@ -91,12 +94,12 @@
       $('#pulseLab').textContent = c.score >= 70 ? 'живо и спокойно' : c.score >= 40 ? 'обычная активность' : 'тихо';
       fg.style.strokeDashoffset = C * (1 - c.score / 100);
       var tr = '';
-      if (p.prev) { var d = c.score - p.prev.score; tr = d === 0 ? ' Как и неделю назад.' : ' На ' + Math.abs(d) + (d > 0 ? ' выше' : ' ниже') + ', чем неделей раньше.'; }
-      $('#pulseText').textContent = c.events + ' ' + plural(c.events, 'событие', 'события', 'событий') + ' и ' + c.species + ' ' + plural(c.species, 'подтверждённый вид', 'подтверждённых вида', 'подтверждённых видов') + ' за неделю.' + tr;
+      if (p.prev) { var d = c.score - p.prev.score; tr = d === 0 ? ' ' + T('Как и неделю назад.') : ' ' + T(d > 0 ? 'На {n} выше, чем неделей раньше.' : 'На {n} ниже, чем неделей раньше.', { n: Math.abs(d) }); }
+      $('#pulseText').textContent = T('{n} {w} и {s} {sw} за неделю.', { n: c.events, w: plural(c.events, 'событие', 'события', 'событий'), s: c.species, sw: plural(c.species, 'подтверждённый вид', 'подтверждённых вида', 'подтверждённых видов') }) + tr;
       $('#stEvents').textContent = c.events;
-      $('#stTrend').textContent = p.prev ? (c.events >= p.prev.events ? '▲ ' : '▼ ') + 'была ' + p.prev.events + ' неделей раньше' : 'за 7 дней';
+      $('#stTrend').textContent = p.prev ? (c.events >= p.prev.events ? '▲ ' : '▼ ') + T('была {n} неделей раньше', { n: p.prev.events }) : T('за 7 дней');
       $('#stSpecies').textContent = c.species; $('#stVerified').textContent = Math.round(c.verified * 100) + '%';
-      var rows = [['Разнообразие', c.parts.diversity, c.species + ' из 10'], ['Активность', c.parts.activity, c.events + ' из 60'], ['Доверие', c.parts.trust, Math.round(c.verified * 100) + '%']];
+      var rows = [['Разнообразие', c.parts.diversity, T('{n} из 10', { n: c.species })], ['Активность', c.parts.activity, T('{n} из 60', { n: c.events })], ['Доверие', c.parts.trust, Math.round(c.verified * 100) + '%']];
       $('#pulseBars').innerHTML = rows.map(function (r) { return '<div class="bar"><span>' + r[0] + '</span><i style="--w:0%"></i><em>' + r[2] + '</em></div>'; }).join('');
       requestAnimationFrame(function () { requestAnimationFrame(function () { $$('#pulseBars .bar i').forEach(function (el, i) { el.style.setProperty('--w', Math.round(rows[i][1] * 100) + '%'); }); }); });
     }
@@ -154,7 +157,7 @@
   function runDetect(snr) {
     var old = sess.events, evs = D.detect(sess.sp, snr);
     sess.events = evs.map(function (e) { e.status = 'auto'; e.species = null; return e; });
-    sess.sel = -1; $('#sensVal').textContent = snr + ' дБ'; scheduleIdentify(900);
+    sess.sel = -1; $('#sensVal').textContent = snr + ' ' + T('дБ'); scheduleIdentify(900);
     return old;
   }
   function buildPlayer() {
@@ -167,23 +170,23 @@
     box.style.width = W + 'px'; box.style.height = SPECH + 'px';
     paintSpec($('#spec'), sess.sp, W, SPECH);
     $('#resTitle').textContent = sess.name;
-    $('#resMeta').textContent = Math.round(sess.dur * 10) / 10 + ' сек · ' + fmtDT(sess.start);
+    $('#resMeta').textContent = Math.round(sess.dur * 10) / 10 + ' ' + T('сек') + ' · ' + fmtDT(sess.start);
     renderEvents();
   }
   function renderEvents() {
     var evs = sess.events, W = specSize(), fmin = sess.sp.fmin, fmax = sess.sp.fmax;
-    $('#evTitle').textContent = evs.length ? 'События: ' + evs.length : 'События не найдены';
+    $('#evTitle').textContent = evs.length ? T('События: {n}', { n: evs.length }) : T('События не найдены');
     $('#saveBtn').disabled = !evs.length || sess.saved; $('#saveBtn').textContent = sess.saved ? 'Сохранено' : 'Сохранить в журнал';
     $('#evLayer').innerHTML = evs.map(function (e, i) {
       var l = e.t0 / sess.dur * W, w = Math.max(6, (e.t1 - e.t0) / sess.dur * W);
       var top = (1 - (e.fHigh - fmin) / (fmax - fmin)) * SPECH, h = Math.max(8, (e.fHigh - e.fLow) / (fmax - fmin) * SPECH);
-      return '<button class="ev ' + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + (i === sess.sel ? ' sel' : '') + '" data-i="' + i + '" style="left:' + l + 'px;width:' + w + 'px;top:' + top + 'px;height:' + h + 'px" aria-label="Событие ' + (i + 1) + '"></button>';
+      return '<button class="ev ' + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + (i === sess.sel ? ' sel' : '') + '" data-i="' + i + '" style="left:' + l + 'px;width:' + w + 'px;top:' + top + 'px;height:' + h + 'px" aria-label="' + esc(T('Событие {n}', { n: i + 1 })) + '"></button>';
     }).join('');
     var ul = $('#events');
     ul.innerHTML = evs.map(function (e, i) {
-      var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">модель ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
+      var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">' + esc(T('модель')) + ' ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.sci) + '">' + (s.own ? '★ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.sci) + '">' + (s.own ? '★ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
         '<div class="acts"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
@@ -239,14 +242,16 @@
     ownPick(ev); autoPick(ev);
     delete ev._res;
   }
+  var lastAll = null;
   function recordingSummary(all) {
     var el = $('#recSummary'); if (!el) return;
     var m = {}, n = all.length;
     all.forEach(function (r) { r.species.forEach(function (s) { var o = m[s.sci] || (m[s.sci] = { sci: s.sci, common: s.common, sum: 0 }); o.sum += s.conf; }); });
     var top = Object.keys(m).map(function (k) { return { sci: m[k].sci, common: m[k].common, conf: m[k].sum / n }; }).filter(function (s) { return s.conf >= SUGMIN; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 3);
     el.hidden = false;
-    el.innerHTML = top.length ? '<b>Итог по записи.</b> Вероятнее всего здесь: ' + top.map(function (s) { return esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b>'; }).join(', ') + '. Это среднее по ' + n + ' ' + plural(n, 'фрагменту', 'фрагментам', 'фрагментам') + ' и точнее одиночных подсказок.'
-      : '<b>Итог по записи.</b> Уверенно определить вид модель не смогла. Выберите его сами в карточках: так приложение научится.';
+    lastAll = all;
+    el.innerHTML = top.length ? '<b>' + esc(T('Итог по записи.')) + '</b> ' + esc(T('Вероятнее всего здесь:')) + ' ' + top.map(function (s) { return esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b>'; }).join(', ') + '. ' + esc(T('Это среднее по {n} {w} и точнее одиночных подсказок.', { n: n, w: plural(n, 'фрагменту', 'фрагментам', 'фрагментам') }))
+      : '<b>' + esc(T('Итог по записи.')) + '</b> ' + esc(T('Уверенно определить вид модель не смогла. Выберите его сами в карточках: так приложение научится.'));
   }
   function runIdentify() {
     if (!sess || !sess.events.length) { setIdState(''); var rs0 = $('#recSummary'); if (rs0) rs0.hidden = true; return; }
@@ -308,12 +313,12 @@
     var chip = e.target.closest('[data-a="sug"]');
     if (chip) {
       var sg = ev.suggest[+chip.dataset.k], sid = S.sugId(sg); ev.species = sid; ev.auto = true; ev.autoConf = sg.conf; sess.saved = false; renderEvents();
-      var nl = $('#events [data-i="' + i + '"]'); toast('Выбрано: ' + S.sugName(sg) + '. Нажмите «Верно», если согласны'); if (nl) $('select', nl).focus({ preventScroll: true }); return;
+      var nl = $('#events [data-i="' + i + '"]'); toast(T('Выбрано: {name}. Нажмите «Верно», если согласны', { name: S.sugName(sg) })); if (nl) $('select', nl).focus({ preventScroll: true }); return;
     }
     if (a === 'yes') {
       var sel = $('select', li), id = pickSpecies(sel);
       if (!id) { toast('Сначала выберите вид'); sel.focus(); return; }
-      ev.species = id; ev.status = 'confirmed'; sess.saved = false; renderEvents(); toast('Подтверждено: ' + spName(id)); return;
+      ev.species = id; ev.status = 'confirmed'; sess.saved = false; renderEvents(); toast(T('Подтверждено: {name}', { name: spName(id) })); return;
     }
     if (a === 'no') { ev.status = 'rejected'; ev.species = null; ev.auto = false; sess.saved = false; renderEvents(); return; }
   });
@@ -322,10 +327,10 @@
     var li = e.target.closest('.evc'), ev = sess.events[+li.dataset.i], id = pickSpecies(e.target); if (id) { ev.species = id; ev.auto = false; }
   });
   $('#sens').addEventListener('input', function () {
-    if (!sess) { $('#sensVal').textContent = this.value + ' дБ'; return; }
+    if (!sess) { $('#sensVal').textContent = this.value + ' ' + T('дБ'); return; }
     runDetect(+this.value); sess.saved = false; renderEvents();
   });
-  $('#sensVal').textContent = $('#sens').value + ' дБ';
+  $('#sensVal').textContent = $('#sens').value + ' ' + T('дБ');
 
   $('#saveBtn').addEventListener('click', function () {
     if (!sess || sess.saved || !sess.events.length) return;
@@ -337,7 +342,7 @@
     var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
     S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
-    toast('Сохранено: ' + evs.length + ' ' + plural(evs.length, 'событие', 'события', 'событий'));
+    toast(T('Сохранено: {n} {w}', { n: evs.length, w: plural(evs.length, 'событие', 'события', 'событий') }));
   });
 
   /* drop + file */
@@ -365,11 +370,11 @@
         stream.getTracks().forEach(function (t) { t.stop(); }); clearInterval(rec.timer);
         var start = rec.t0; rec = null; $('#recBtn').classList.remove('rec'); $('#recLab').textContent = 'Записать';
         var blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
-        blob.arrayBuffer().then(function (ab) { analyze(ab, 'Запись ' + pad(new Date(start).getHours()) + ':' + pad(new Date(start).getMinutes()), start); });
+        blob.arrayBuffer().then(function (ab) { analyze(ab, T('Запись') + ' ' + pad(new Date(start).getHours()) + ':' + pad(new Date(start).getMinutes()), start); });
       };
       mr.start(); $('#recBtn').classList.add('rec'); setStatus('');
-      rec.timer = setInterval(function () { var s = Math.round((Date.now() - t0) / 1000); $('#recLab').textContent = 'Стоп ' + Math.floor(s / 60) + ':' + pad(s % 60); if (s >= MAXSEC) stopRec(); }, 250);
-      $('#recLab').textContent = 'Стоп 0:00';
+      rec.timer = setInterval(function () { var s = Math.round((Date.now() - t0) / 1000); $('#recLab').textContent = T('Стоп') + ' ' + Math.floor(s / 60) + ':' + pad(s % 60); if (s >= MAXSEC) stopRec(); }, 250);
+      $('#recLab').textContent = T('Стоп') + ' 0:00';
     }).catch(function () { setStatus('Нет доступа к микрофону. Разрешите его в настройках браузера или загрузите файл.', true); });
   });
   function stopRec() { if (rec && rec.mr.state !== 'inactive') rec.mr.stop(); }
@@ -387,13 +392,13 @@
     $('#revEmpty').hidden = !empty; $('#revCard').hidden = empty;
     if (empty) { if (queue.length) $('#revEmpty b').textContent = 'Очередь закончилась'; else $('#revEmpty b').textContent = 'Очередь пуста'; return; }
     var d = queue[qi]; curClip = null;
-    $('#revPos').textContent = (qi + 1) + ' из ' + queue.length;
-    $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + d.station + ' · ' + (d.fLow / 1000).toFixed(1) + ' до ' + (d.fHigh / 1000).toFixed(1) + ' кГц · +' + d.snr + ' дБ · ' + D.describe(d) + (S.threatOf(d) ? ' · ⚠ ' + (S.threatOf(d).kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') : S.soundKind(d) && S.soundKind(d) !== 'animal' ? ' · ' + SK[S.soundKind(d)] : '');
+    $('#revPos').textContent = T('{a} из {b}', { a: qi + 1, b: queue.length });
+    $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + T(d.station || '') + ' · ' + (d.fLow / 1000).toFixed(1) + '–' + (d.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + d.snr + ' ' + T('дБ') + ' · ' + T(D.describe(d)) + (S.threatOf(d) ? ' · ⚠ ' + T(S.threatOf(d).kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') : S.soundKind(d) && S.soundKind(d) !== 'animal' ? ' · ' + T(SK[S.soundKind(d)]) : '');
     var sel = $('#revSel'); speciesOptions(sel, true);
     if (d.suggest) {
       var gid = S.sugId(d.suggest);
       if (!sel.querySelector('option[value="' + gid.replace(/"/g, '') + '"]')) { var go = document.createElement('option'); go.value = gid; go.textContent = S.sugName(d.suggest); sel.insertBefore(go, sel.lastChild); }
-      sel.value = gid; $('#revMeta').textContent += ' · модель предполагает: ' + S.sugName(d.suggest) + ' ' + Math.round(d.suggest.conf * 100) + '%';
+      sel.value = gid; $('#revMeta').textContent += ' · ' + T('модель предполагает') + ': ' + S.sugName(d.suggest) + ' ' + Math.round(d.suggest.conf * 100) + '%';
     }
     S.getClip(d.id).then(function (int16) {
       if (queue[qi] !== d || !int16) return;
@@ -443,7 +448,7 @@
     var html = '', d = new Date(start);
     while (d <= today) {
       var key = S.dayKey(d), c = per[key] || 0, lv = c ? Math.min(4, Math.ceil(4 * c / Math.max(1, max))) : 0;
-      html += '<button class="hc' + (lv ? ' l' + lv : '') + '" data-d="' + key + '" aria-label="' + fmtD(d) + ', событий: ' + c + '" title="' + fmtD(d) + ': ' + c + '"></button>';
+      html += '<button class="hc' + (lv ? ' l' + lv : '') + '" data-d="' + key + '" aria-label="' + fmtD(d) + ', ' + T('событий') + ': ' + c + '" title="' + fmtD(d) + ': ' + c + '"></button>';
       d.setDate(d.getDate() + 1);
     }
     var heat = $('#heat'); heat.innerHTML = html;
@@ -460,8 +465,8 @@
     var key = b.dataset.d, list = S.get().dets.filter(function (d) { return d.status !== 'rejected' && S.dayKey(d.ts) === key; });
     var by = {}, un = 0; list.forEach(function (d) { if (d.species) by[d.species] = (by[d.species] || 0) + 1; else un++; });
     var parts = Object.keys(by).map(function (id) { return spName(id) + ' ' + by[id]; });
-    if (un) parts.push('не проверено ' + un);
-    var p = key.split('-'); $('#dayInfo').textContent = p[2] + '.' + p[1] + '.' + p[0] + ': ' + (list.length ? list.length + ' ' + plural(list.length, 'событие', 'события', 'событий') + '. ' + parts.join(', ') : 'тишина');
+    if (un) parts.push(T('не проверено {n}', { n: un }));
+    var p = key.split('-'); $('#dayInfo').textContent = p[2] + '.' + p[1] + '.' + p[0] + ': ' + (list.length ? list.length + ' ' + plural(list.length, 'событие', 'события', 'событий') + '. ' + parts.join(', ') : T('тишина'));
   });
 
   /* ---------- data ---------- */
@@ -486,16 +491,16 @@
     navigator.geolocation.getCurrentPosition(function (p) { $('#stLat').value = p.coords.latitude.toFixed(5); $('#stLon').value = p.coords.longitude.toFixed(5); $('#stMsg').textContent = 'Готово, нажмите «Сохранить»'; },
       function () { $('#stMsg').textContent = 'Нет доступа к местоположению'; }, { enableHighAccuracy: true, timeout: 12000 });
   });
-  $('#exCsv').addEventListener('click', function () { download('wetlandear-журнал.csv', S.exportLog()); });
+  $('#exCsv').addEventListener('click', function () { download('wetlandear-journal.csv', S.exportLog()); });
   $('#exDwc').addEventListener('click', function () { download('wetlandear-darwin-core.csv', S.exportDwC()); });
   $('#exJson').addEventListener('click', function () { download('wetlandear-backup.json', S.exportJSON(), 'application/json'); });
   $('#imJson').addEventListener('change', function () {
     var f = this.files[0], inp = this; if (!f) return;
-    if (!confirm('Заменить текущие данные резервной копией?')) { inp.value = ''; return; }
+    if (!confirm(T('Заменить текущие данные резервной копией?'))) { inp.value = ''; return; }
     f.text().then(function (t) { S.importJSON(t); toast('Данные восстановлены'); show('pulse'); }).catch(function () { toast('Это не резервная копия WetlandEar'); }).then(function () { inp.value = ''; });
   });
   $('#wipe').addEventListener('click', function () {
-    if (confirm('Удалить все записи, события и настройки на этом устройстве? Это нельзя отменить.')) { S.wipe(); toast('Все данные удалены'); show('pulse'); }
+    if (confirm(T('Удалить все записи, события и настройки на этом устройстве? Это нельзя отменить.'))) { S.wipe(); toast('Все данные удалены'); show('pulse'); }
   });
 
 
@@ -523,8 +528,38 @@
     var dets = S.get().dets.filter(function (d) { return !d.demo && d.status !== 'rejected'; }), spp = {};
     dets.forEach(function (d) { if (d.status === 'confirmed' && d.species) spp[d.species] = 1; });
     $('#pfEvents').textContent = dets.length; $('#pfConf').textContent = dets.filter(function (d) { return d.status === 'confirmed'; }).length; $('#pfSpp').textContent = Object.keys(spp).length;
-    var st = WESync.status(); $('#pfSync').textContent = st.busy ? 'Синхронизирую...' : st.last ? 'Последняя синхронизация: ' + fmtDT(st.last.toISOString()) : 'Журнал хранится у вас на устройстве и копируется в облако.';
+    var st = WESync.status(); $('#pfSync').textContent = st.busy ? 'Синхронизирую...' : st.last ? T('Последняя синхронизация: {t}', { t: fmtDT(st.last.toISOString()) }) : 'Журнал хранится у вас на устройстве и копируется в облако.';
+    renderTg();
     WESync.getProfile().then(function (p) { $('#pfName').value = p.display_name || me.name || ''; $('#pfOrg').value = p.organization || ''; $('#pfRole').value = p.role || ''; }).catch(function () { $('#pfName').value = me.name || ''; });
+  }
+  /* Telegram morning report */
+  function renderTg() {
+    var box = $('#tgBody'); if (!box || !window.WESync || !WESync.me()) return;
+    var bot = (window.WE_CONFIG && WE_CONFIG.telegramBot) || '';
+    if (!bot) { box.innerHTML = '<p class="hint">' + esc(T('Бот пока не подключён администратором. Отчёт можно отправить вручную на экране «Утренний отчёт».')) + '</p>'; return; }
+    box.innerHTML = '<p class="hint">' + esc(T('Загружаю...')) + '</p>';
+    WESync.tgGet().then(function (row) {
+      var lang = window.WEi18n ? WEi18n.lang : 'ru';
+      if (row && row.chat_id) {
+        box.innerHTML = '<p><span class="chip ok">' + esc(T('Подключено')) + '</span> ' + esc(row.enabled ? T('Отчёты включены') : T('Отчёты выключены')) + '</p>' +
+          '<div class="row wrap"><button class="btn" id="tgToggle">' + esc(row.enabled ? T('Выключить') : T('Включить')) + '</button><button class="btn" id="tgLang">' + esc(T('Язык отчёта') + ': ' + row.lang.toUpperCase()) + '</button>' +
+          '<button class="btn" id="tgTest">' + esc(T('Отправить тестовый отчёт')) + '</button><button class="btn no" id="tgOff">' + esc(T('Отключить Telegram')) + '</button></div>';
+        $('#tgToggle').addEventListener('click', function () { WESync.tgSet({ enabled: !row.enabled }).then(renderTg).catch(function () { toast(T('Не удалось сохранить')); }); });
+        $('#tgLang').addEventListener('click', function () { WESync.tgSet({ lang: row.lang === 'ru' ? 'en' : 'ru' }).then(renderTg).catch(function () { toast(T('Не удалось сохранить')); }); });
+        $('#tgTest').addEventListener('click', function () {
+          toast(T('Отправляю...'));
+          WESync.tgTest().then(function (r) { toast(r.status === 200 ? (r.body.sent ? T('Отчёт отправлен в Telegram') : T('За 7 дней событий нет, отправлять нечего')) : T('Не удалось отправить. Проверьте подключение.')); }).catch(function () { toast(T('Не удалось отправить. Проверьте подключение.')); });
+        });
+        $('#tgOff').addEventListener('click', function () { if (confirm(T('Отключить Telegram?'))) WESync.tgRemove().then(function () { toast(T('Telegram отключён')); renderTg(); }); });
+      } else if (row && row.code) {
+        box.innerHTML = '<p class="hint">' + esc(T('Откройте Telegram, нажмите Start, затем вернитесь и обновите.')) + '</p>' +
+          '<div class="row wrap"><a class="btn primary" target="_blank" rel="noopener" href="https://t.me/' + esc(bot) + '?start=' + esc(row.code) + '">' + esc(T('Открыть Telegram')) + '</a><button class="btn" id="tgRefresh">' + esc(T('Обновить')) + '</button></div>';
+        $('#tgRefresh').addEventListener('click', renderTg);
+      } else {
+        box.innerHTML = '<div class="row"><button class="btn primary" id="tgConn">' + esc(T('Подключить Telegram')) + '</button></div>';
+        $('#tgConn').addEventListener('click', function () { WESync.tgConnect(lang).then(renderTg).catch(function () { toast(T('Не удалось сохранить')); }); });
+      }
+    }).catch(function () { box.innerHTML = '<p class="hint">' + esc(T('Не удалось загрузить настройки Telegram.')) + '</p>'; });
   }
   $('#signBannerBtn').addEventListener('click', doSignIn);
   $('#profSignIn').addEventListener('click', doSignIn);
@@ -543,8 +578,20 @@
     WESync.init().then(renderAuth).catch(function () { });
   }
 
+  /* ---------- language ---------- */
+  function langButtons() { var l = window.WEi18n ? WEi18n.lang : 'ru'; $$('.lang button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.lang === l ? 'true' : 'false'); b.classList.toggle('on', b.dataset.lang === l); }); }
+  if (window.WEi18n) {
+    $$('.lang button').forEach(function (b) { b.addEventListener('click', function () { WEi18n.set(b.dataset.lang); }); });
+    WEi18n.onChange(function () {
+      $('#sensVal').textContent = $('#sens').value + ' ' + T('дБ');
+      if (sess) { renderEvents(); $('#resMeta').textContent = Math.round(sess.dur * 10) / 10 + ' ' + T('сек') + ' · ' + fmtDT(sess.start); if (lastAll) recordingSummary(lastAll); }
+      renderAuth(); show(current); langButtons();
+    });
+    WEi18n.init(); langButtons();
+  }
+
   /* ---------- start ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () { });
   show((location.hash || '#pulse').slice(1));
-  window.WEApp = { analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, current: function () { return current; } };
+  window.WEApp = { analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, refreshChrome: refreshChrome, speciesOptions: speciesOptions, sndHtml: sndHtml, current: function () { return current; } };
 })();

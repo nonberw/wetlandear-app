@@ -110,3 +110,27 @@ create policy "own clips delete" on storage.objects for delete to authenticated
   using (bucket_id = 'clips' and (storage.foldername(name))[1] = (select auth.uid())::text);
 alter table public.detections add column if not exists sound jsonb;
 alter table public.detections add column if not exists emb text;
+
+-- Telegram morning report: one link per user. chat_id is written only by the server (secret key), never by the user.
+create table if not exists public.telegram_links (
+  user_id uuid primary key references auth.users (id) on delete cascade default auth.uid(),
+  code text unique,
+  chat_id bigint,
+  enabled boolean not null default true,
+  lang text not null default 'ru' check (lang in ('ru', 'en')),
+  created_at timestamptz not null default now()
+);
+alter table public.telegram_links enable row level security;
+create policy "own link select" on public.telegram_links for select to authenticated using (user_id = (select auth.uid()));
+create policy "own link insert" on public.telegram_links for insert to authenticated with check (user_id = (select auth.uid()));
+create policy "own link update" on public.telegram_links for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+create policy "own link delete" on public.telegram_links for delete to authenticated using (user_id = (select auth.uid()));
+revoke all on public.telegram_links from anon, authenticated;
+grant select on public.telegram_links to authenticated;
+grant insert (user_id, code, enabled, lang) on public.telegram_links to authenticated;
+grant update (code, enabled, lang) on public.telegram_links to authenticated;
+grant delete on public.telegram_links to authenticated;
+grant usage on schema public to service_role;
+grant all on public.telegram_links to service_role;
+grant select on public.detections to service_role;
+grant select on public.profiles to service_role;

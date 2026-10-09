@@ -30,6 +30,7 @@
     <button data-view="calendar"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Календарь</span></button>
     <button data-view="data"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg><span>Данные</span></button>
   </nav>
+  <div class="lang" role="group" aria-label="Язык"><button data-lang="ru" aria-pressed="true">RU</button><button data-lang="en" aria-pressed="false">EN</button></div>
   <div class="auth" id="authBox"></div>
   <a class="back" href="https://wetlandear.tech" aria-label="Вернуться на сайт wetlandear.tech"><span aria-hidden="true">&larr;</span> <span class="bt">Сайт</span></a>
   <span class="ver">v0.1 прототип</span>
@@ -79,7 +80,7 @@
   </div>
 
   <div class="card">
-    <h2>Последние события</h2>
+    <div class="res-head"><h2>Последние события</h2><button class="link" data-go="log">Весь журнал</button></div>
     <ul class="list" id="recent"></ul>
   </div>
 </section>
@@ -165,10 +166,30 @@
     <p class="hint" id="dayInfo">Нажмите на день, чтобы увидеть подробности.</p>
   </div>
   <div class="card">
-    <h2>Первые обнаружения сезона</h2>
+    <div class="res-head"><h2>Первые обнаружения сезона</h2><button class="link" data-go="log">Весь журнал</button></div>
     <div class="tbl-wrap"><table class="tbl" id="season"><thead><tr><th>Вид</th><th>Впервые</th><th>Последний раз</th><th>Событий</th></tr></thead><tbody></tbody></table></div>
     <p class="hint">Только подтверждённые человеком наблюдения за текущий год.</p>
   </div>
+</section>
+
+<!-- JOURNAL -->
+<section id="v-log" class="view" aria-labelledby="h-log">
+  <h1 id="h-log">Журнал</h1>
+  <p class="lead">Все ваши события в одном месте. Ищите по виду, станции или дате, фильтруйте, прослушивайте и исправляйте решения.</p>
+  <div class="card">
+    <label class="srch"><span class="sr-only">Поиск</span><input id="logQ" type="search" placeholder="Поиск: вид, станция, дата" autocomplete="off" enterkeyhint="search"></label>
+    <div class="chips" id="logChips" role="group" aria-label="Фильтр по статусу">
+      <button class="on" data-f="all">Все</button><button data-f="confirmed">Подтверждённые</button><button data-f="model">Ждут проверки</button><button data-f="threat">Тревоги</button><button data-f="rejected">Отклонённые</button>
+    </div>
+    <div class="log-tools">
+      <label>Вид<select id="logSp"></select></label>
+      <label>Период<select id="logPeriod"><option value="7">7 дней</option><option value="30">30 дней</option><option value="365">Год</option><option value="0" selected>Всё время</option></select></label>
+      <button class="btn sm" id="logCsv">Выгрузить CSV</button>
+    </div>
+    <p class="hint" id="logCount"></p>
+  </div>
+  <ul class="logs" id="logList"></ul>
+  <div class="row"><button class="btn" id="logMore" hidden>Показать ещё</button></div>
 </section>
 
 <!-- MAP -->
@@ -230,6 +251,11 @@
       <div class="card stat"><span>Подтверждено</span><b id="pfConf">0</b><small>человеком</small></div>
       <div class="card stat"><span>Виды</span><b id="pfSpp">0</b><small>подтверждены</small></div>
     </div>
+    <div class="card" id="tgCard">
+      <h2>Утренний отчёт в Telegram</h2>
+      <p class="hint">Каждое утро в 07:00 по Астане бот пришлёт короткий отчёт: кто пел, новые виды, тревоги, молчащие станции.</p>
+      <div id="tgBody"></div>
+    </div>
     <div class="card">
       <h2>Синхронизация</h2>
       <p class="hint" id="pfSync">Журнал хранится у вас на устройстве и копируется в облако.</p>
@@ -275,9 +301,9 @@
       <li><b>Модель</b> BirdNET предлагает вид, но это только подсказка. <b>Человек</b> выбирает вид и подтверждает. Так появляется «Подтверждено человеком».</li>
       <li><b>Пульс</b> и календарь строятся из журнала.</li>
     </ol>
-    <p class="status-row"><span class="chip ok">Работает</span> поиск событий, подсказки видов (BirdNET, после входа), журнал, пульс, календарь, выгрузка, аккаунт и синхронизация</p>
-    <p class="status-row"><span class="chip wip">В разработке</span> карта станций, работа определения вида без интернета</p>
-    <p class="status-row"><span class="chip plan">Запланировано</span> подключение станций ESP32-S3, утренний отчёт, дообучение на местных голосах</p>
+    <p class="status-row"><span class="chip ok">Работает</span> поиск событий, подсказки видов (BirdNET, после входа), журнал с поиском, пульс, календарь, карта, утренний отчёт, выгрузка, аккаунт и синхронизация, русский и английский</p>
+    <p class="status-row"><span class="chip wip">В разработке</span> утренний отчёт в Telegram, определение вида без интернета, собственная модель для видов, которых нет в BirdNET</p>
+    <p class="status-row"><span class="chip plan">Запланировано</span> подключение станций ESP32-S3, вопросы к журналу обычным языком</p>
   </div>
   <div class="card" id="installCard" hidden>
     <h2>Установить приложение</h2>
@@ -293,6 +319,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+<script src="js/i18n.js"></script>
+<script src="js/i18n-en.js"></script>
+<script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
 <script src="js/dsp.js"></script>
 <script src="js/store.js"></script>

@@ -24,16 +24,18 @@
     ['ala_arv', 'Полевой жаворонок', 'Alauda arvensis'],
     ['mel_yel', 'Чёрный жаворонок', 'Melanocorypha yeltoniensis']
   ];
-  var byId = {}, byLat = {}; SPECIES.forEach(function (s) { byId[s[0]] = { id: s[0], ru: s[1], lat: s[2] }; byLat[s[2]] = s[0]; });
+  var EN_NAMES = { pho_ros: 'Greater Flamingo', pel_cri: 'Dalmatian Pelican', pel_ono: 'Great White Pelican', ant_vir: 'Demoiselle Crane', gru_gru: 'Common Crane', cyg_cyg: 'Whooper Swan', ans_ans: 'Greylag Goose', ans_ery: 'Lesser White-fronted Goose', tad_fer: 'Ruddy Shelduck', lar_ich: "Pallas's Gull", chl_hyb: 'Whiskered Tern', pod_cri: 'Great Crested Grebe', ful_atr: 'Eurasian Coot', van_van: 'Northern Lapwing', aro_aru: 'Great Reed Warbler', lus_sve: 'Bluethroat', ala_arv: 'Eurasian Skylark', mel_yel: 'Black Lark' };
+  function T(s, v) { return window.WEi18n ? window.WEi18n.t(s, v) : s; }
+  var byId = {}, byLat = {}; SPECIES.forEach(function (s) { byId[s[0]] = { id: s[0], ru: s[1], en: EN_NAMES[s[0]] || s[1], lat: s[2] }; byLat[s[2]] = s[0]; });
   /* Model suggestions: known species map to the reference list, others keep the English common name. */
-  function nameOf(id) { return byId[id] ? byId[id].ru : String(id).replace(/^x:/, ''); }
+  function nameOf(id) { var s = byId[id]; return s ? ((window.WEi18n && window.WEi18n.lang === 'en') ? s.en : s.ru) : String(id).replace(/^x:/, ''); }
   function sugId(s) { return s.id || byLat[s.sci] || ('x:' + s.common); }
-  function sugName(s) { if (s.id) return nameOf(s.id); var id = byLat[s.sci]; return id ? byId[id].ru : s.common; }
+  function sugName(s) { if (s.id) return nameOf(s.id); var id = byLat[s.sci]; return id ? nameOf(id) : s.common; }
 
   var state = load();
   function blank() { return { recs: [], dets: [], station: { name: 'Телефон 1', lat: null, lon: null }, seq: 1 }; }
   function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.dets) return s; } catch (e) { } return blank(); }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { alert('Не хватает места в хранилище браузера. Выгрузите журнал и очистите старые данные.'); } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { alert(T('Не хватает места в хранилище браузера. Выгрузите журнал и очистите старые данные.')); } }
   function uid(p) { return p + Date.now().toString(36) + (state.seq++).toString(36) + Math.random().toString(36).slice(2, 6); }
 
   /* ---------- audio clips in IndexedDB ---------- */
@@ -142,14 +144,16 @@
   /* ---------- export ---------- */
   function csvCell(v) { v = v == null ? '' : String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
   function toCSV(rows) { return '﻿' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'); }
-  function exportLog() {
+  function exportRows(list) {
     var rows = [['id', 'время', 'станция', 'широта', 'долгота', 'сек_начало', 'сек_конец', 'частота_от_Гц', 'частота_до_Гц', 'пик_Гц', 'SNR_дБ', 'статус', 'вид', 'латинское_название', 'демо']];
-    state.dets.forEach(function (d) {
+    rows[0] = rows[0].map(function (h) { return T(h); });
+    list.forEach(function (d) {
       var sp = d.species && byId[d.species];
-      rows.push([d.id, d.ts, d.station, d.lat, d.lon, d.t0.toFixed(2), d.t1.toFixed(2), d.fLow, d.fHigh, d.fPeak, d.snr, d.status, sp ? sp.ru : (d.species || ''), sp ? sp.lat : '', d.demo ? 'да' : '']);
+      rows.push([d.id, d.ts, d.station, d.lat, d.lon, d.t0.toFixed(2), d.t1.toFixed(2), d.fLow, d.fHigh, d.fPeak, d.snr, d.status, sp ? nameOf(d.species) : (d.species || ''), sp ? sp.lat : '', d.demo ? T('да') : '']);
     });
     return toCSV(rows);
   }
+  function exportLog() { return exportRows(state.dets); }
   /* Darwin Core occurrence core. Only human-confirmed records with a species name, never demo data. */
   function exportDwC() {
     var rows = [['occurrenceID', 'basisOfRecord', 'eventDate', 'scientificName', 'vernacularName', 'decimalLatitude', 'decimalLongitude', 'recordedBy', 'identificationVerificationStatus', 'samplingProtocol', 'locality']];
@@ -262,6 +266,6 @@
     SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, nameOf: nameOf, packEmb: packEmb, matchOwn: matchOwn, ownStats: ownStats, libReset: libReset, level: level, soundKind: soundKind, threatOf: threatOf, stationStats: stationStats, report: report, get: function () { return state; }, save: save,
     addRecording: addRecording, setStatus: setStatus, getClip: getClip, pulse: pulse, perDay: perDay, dayKey: dayKey, seasonTable: seasonTable,
     seedDemo: seedDemo, clearDemo: clearDemo, hasDemo: hasDemo,
-    exportLog: exportLog, exportDwC: exportDwC, exportJSON: exportJSON, importJSON: importJSON, wipe: wipe
+    exportLog: exportLog, exportRows: exportRows, exportDwC: exportDwC, exportJSON: exportJSON, importJSON: importJSON, wipe: wipe
   };
 })();
