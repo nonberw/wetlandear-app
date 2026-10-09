@@ -216,5 +216,14 @@ window.WE_RU = {
 "Greater Scaup": "Морская чернеть",
 "Imperial Eagle": "Могильник",
 "Egyptian Vulture": "Стервятник",
-"Saker Falcon": "Балобан"
+"Saker Falcon": "Балобан",
+"Green Sandpiper": "Черныш",
+"Temminck's Stint": "Белохвостый песочник",
+"Bar-tailed Godwit": "Малый веретенник",
+"Red-necked Phalarope": "Круглоносый плавунчик",
+"Black-winged Pratincole": "Луговая тиркушка",
+"Lesser Sand-Plover": "Монгольский зуёк",
+"Terek Sandpiper": "Мородунка",
+"Curlew Sandpiper": "Краснозобик",
+"Greater Sand-Plover": "Толстоклювый зуёк"
 };

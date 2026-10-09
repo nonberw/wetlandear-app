@@ -1,5 +1,5 @@
 /* Offline shell: the app opens without a network. Account data stays in your own Supabase account. */
-var V = 'we-app-v8';
+var V = 'we-app-v9';
 var SHELL = ['/', 'index.html', 'css/app.css', 'js/species-ru.js', 'js/species-sci.js', 'js/dsp.js', 'js/store.js', 'js/sync.js', 'js/config.js', 'js/i18n.js', 'js/i18n-en.js', 'js/vendor/supabase.js', 'js/vendor/leaflet.js', 'css/vendor/leaflet.css', 'js/app.js', 'js/extras.js', 'js/more.js', 'favicon.svg', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(V).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); })); });
 self.addEventListener('activate', function (e) {
