@@ -300,3 +300,6 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 .ask-out { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--sky); }
 .ask-a { white-space: pre-wrap; margin-bottom: 8px; }
 @media (max-width: 520px) { .ask-row { flex-direction: column; } }
+
+/* suggestion from WetlandEar's own classifier */
+.sug.head { background: #E6F6F4; border-color: #4FB3AA; color: #0F766E; }

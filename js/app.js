@@ -186,7 +186,7 @@
     ul.innerHTML = evs.map(function (e, i) {
       var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">' + esc(T('модель')) + ' ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.sci) + '">' + (s.own ? '★ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : s.head ? ' head' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.head ? 'модель WetlandEar, обучена на записях Xeno-canto' : s.sci) + '">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
         '<div class="acts"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
@@ -205,8 +205,9 @@
   }
   /* Fill the species in automatically unless a person already decided, or the sound looks like wind, rain or speech. */
   function autoPick(ev) {
-    var sg = ev.suggest && ev.suggest[0];
-    if (!sg || ev.status !== 'auto' || ev.species || sg.conf < AUTOMIN) return;
+    if (!ev.suggest || ev.status !== 'auto' || ev.species) return;
+    var sg = ev.suggest.filter(function (s) { return s.conf >= (s.head ? .35 : AUTOMIN); })[0];
+    if (!sg) return;
     var kind = S.soundKind(ev);
     if ((kind === 'weather' || kind === 'speech') && sg.conf < .6) return;
     ev.species = S.sugId(sg); ev.auto = true; ev.autoConf = sg.conf;
@@ -236,6 +237,10 @@
     });
     ev.suggest = Object.keys(m).map(function (k) { return { sci: m[k].sci, common: m[k].common, conf: m[k].sum / n }; })
       .filter(function (s) { return s.conf >= SUGMIN; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 3);
+    var hm = {};
+    rs.forEach(function (r) { (r.head || []).forEach(function (s) { var o = hm[s.sci] || (hm[s.sci] = { sci: s.sci, common: s.common, sum: 0 }); o.sum += s.conf; }); });
+    var heads = Object.keys(hm).map(function (k) { return { sci: hm[k].sci, common: hm[k].common, conf: hm[k].sum / n, head: true }; }).filter(function (s) { return s.conf >= .25; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 1);
+    if (heads.length) ev.suggest = heads.concat(ev.suggest.filter(function (s) { return s.sci !== heads[0].sci; })).slice(0, 3);
     var mid = rs[Math.floor(n / 2)];
     ev.sound = { top: (mid.sound && mid.sound.top) || [], groups: groups };
     ev.emb = mid.emb ? S.packEmb(mid.emb) : null;
@@ -247,7 +252,11 @@
     var el = $('#recSummary'); if (!el) return;
     var m = {}, n = all.length;
     all.forEach(function (r) { r.species.forEach(function (s) { var o = m[s.sci] || (m[s.sci] = { sci: s.sci, common: s.common, sum: 0 }); o.sum += s.conf; }); });
-    var top = Object.keys(m).map(function (k) { return { sci: m[k].sci, common: m[k].common, conf: m[k].sum / n }; }).filter(function (s) { return s.conf >= SUGMIN; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 3);
+    var hmap = {};
+    all.forEach(function (r) { (r.head || []).forEach(function (s) { var o = hmap[s.sci] || (hmap[s.sci] = { sci: s.sci, common: s.common, sum: 0 }); o.sum += s.conf; }); });
+    var hlist = Object.keys(hmap).map(function (k) { return { sci: hmap[k].sci, common: hmap[k].common, conf: hmap[k].sum / n }; }).filter(function (s) { return s.conf >= .25; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 2);
+    var top = Object.keys(m).map(function (k) { return { sci: m[k].sci, common: m[k].common, conf: m[k].sum / n }; }).filter(function (s) { return s.conf >= SUGMIN; }).sort(function (a, b) { return b.conf - a.conf; });
+    top = hlist.concat(top.filter(function (s) { return !hlist.some(function (h) { return h.sci === s.sci; }); })).slice(0, 3);
     el.hidden = false;
     lastAll = all;
     el.innerHTML = top.length ? '<b>' + esc(T('Итог по записи.')) + '</b> ' + esc(T('Вероятнее всего здесь:')) + ' ' + top.map(function (s) { return esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b>'; }).join(', ') + '. ' + esc(T('Это среднее по {n} {w} и точнее одиночных подсказок.', { n: n, w: plural(n, 'фрагменту', 'фрагментам', 'фрагментам') }))
@@ -339,7 +348,7 @@
       for (var i = 0; i < out.length; i++) { var x = Math.max(-1, Math.min(1, sess.samples[a + i])); out[i] = x < 0 ? x * 32768 : x * 32767; }
       return out;
     });
-    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
+    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
     S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
     toast(T('Сохранено: {n} {w}', { n: evs.length, w: plural(evs.length, 'событие', 'события', 'событий') }));

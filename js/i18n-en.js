@@ -341,6 +341,7 @@
  "Эта функция ещё не включена администратором.": "This feature has not been enabled by the administrator yet.",
  "На сегодня лимит вопросов исчерпан. Попробуйте завтра.": "Today's question limit is used up. Try again tomorrow.",
  "Не удалось получить ответ. Попробуйте ещё раз.": "Could not get an answer. Try again.",
+ "модель WetlandEar, обучена на записях Xeno-canto": "WetlandEar model, trained on Xeno-canto recordings",
  "Найдено: {n}": "Found: {n}",
  "Пока пусто. Загрузите запись, выберите вид (в том числе «Другой вид...», например пеликана), нажмите «Верно» и сохраните.": "Nothing here yet. Upload a recording, pick a species (including \"Other species...\", for example a pelican), press \"Correct\" and save.",
  "id": "id",

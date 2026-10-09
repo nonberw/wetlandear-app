@@ -85,10 +85,37 @@ def _run(interp, x):
 
 
 def fingerprint(interp):
-    """The model's own 1024-number description of the last window it listened to (as float16, base64)."""
+    """The model's own 1024-number description of the last window it listened to: (float16 base64 for the client, float vector for the head)."""
     o = interp.get_output_details()[0]
-    e = interp.get_tensor(o['index'] - 1)[0].astype('<f2')
-    return base64.b64encode(e.tobytes()).decode('ascii')
+    e = interp.get_tensor(o['index'] - 1)[0].copy()
+    return base64.b64encode(e.astype('<f2').tobytes()).decode('ascii'), e
+
+
+def _head():
+    """WetlandEar's own classifier trained on Xeno-canto recordings of Korgalzhyn species (models/head.npz), if present."""
+    if 'head' not in _state:
+        path = os.path.join(ROOT, 'head.npz')
+        if os.path.exists(path):
+            z = np.load(path, allow_pickle=False)
+            _state['head'] = {'coef': z['coef'].astype('float32'), 'b': z['intercept'].astype('float32'), 'classes': [str(c) for c in z['classes']], 'common': [str(c) for c in z['common']]}
+        else:
+            _state['head'] = None
+    return _state['head']
+
+
+def head_top(vec):
+    h = _head()
+    if h is None:
+        return []
+    v = vec / (np.linalg.norm(vec) + 1e-9)
+    z = h['coef'] @ v + h['b']
+    p = np.exp(z - z.max()); p /= p.sum()
+    out = []
+    for k in np.argsort(-p)[:4]:
+        if h['classes'][k] == 'background' or p[k] < .15:
+            continue
+        out.append({'sci': h['classes'][k], 'common': h['common'][k], 'conf': round(float(p[k]), 3)})
+    return out
 
 
 def sound_type(window):
@@ -110,7 +137,8 @@ def identify(windows, lat, lon):
     out = []
     for w in windows:
         logits = _run(s['clf'], w.reshape(1, SAMPLES))
-        emb = fingerprint(s['clf'])
+        emb, vec = fingerprint(s['clf'])
+        head = head_top(vec)
         conf = 1.0 / (1.0 + np.exp(-np.clip(logits, -15, 15)))
         conf = np.where(plausible, conf, 0.0)
         top = np.argsort(-conf)[:5]
@@ -121,7 +149,7 @@ def identify(windows, lat, lon):
                 continue
             sci, _, common = s['labels'][k].partition('_')
             items.append({'sci': sci, 'common': common, 'conf': round(float(conf[k]), 3)})
-        out.append({'species': items, 'sound': snd, 'emb': emb})
+        out.append({'species': items, 'sound': snd, 'emb': emb, 'head': head})
     return out
 
 
