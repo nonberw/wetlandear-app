@@ -102,7 +102,12 @@
   function tgCode() { var a = new Uint8Array(12); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
   function tgConnect(lang) {
     var code = tgCode();
-    return sb.from('telegram_links').upsert({ user_id: user.id, code: code, enabled: true, lang: lang || 'ru' }, { onConflict: 'user_id' }).then(function (r) { if (r.error) throw r.error; return code; });
+    /* insert or update: plain columns only, the user may never touch chat_id */
+    return sb.from('telegram_links').select('user_id').eq('user_id', user.id).maybeSingle().then(function (r) {
+      if (r.error) throw r.error;
+      var q = r.data ? sb.from('telegram_links').update({ code: code, enabled: true, lang: lang || 'ru' }).eq('user_id', user.id) : sb.from('telegram_links').insert({ code: code, enabled: true, lang: lang || 'ru' });
+      return q.then(function (w) { if (w.error) throw w.error; return code; });
+    });
   }
   function tgSet(patch) { return sb.from('telegram_links').update(patch).eq('user_id', user.id).then(function (r) { if (r.error) throw r.error; }); }
   function tgRemove() { return sb.from('telegram_links').delete().eq('user_id', user.id).then(function (r) { if (r.error) throw r.error; }); }
