@@ -114,10 +114,11 @@ def parse_ts(s):
     return datetime.fromisoformat(s.replace('Z', '+00:00'))
 
 
-def fetch_rows(user_id, days):
+def fetch_rows(user_id, days, token=None):
+    """With a user token the database applies row security (the user sees only their own rows); without it the secret key is used."""
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     q = 'detections?select=ts,status,species,station,sound&user_id=eq.%s&ts=gte.%s&order=ts.desc&limit=20000' % (user_id, urllib.parse.quote(since))
-    return sb(q) or []
+    return (sb(q, key=PUBLISHABLE_KEY, token=token) if token else sb(q)) or []
 
 
 def first_seen(user_id):

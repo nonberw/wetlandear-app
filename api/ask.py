@@ -19,8 +19,8 @@ DAILY_LIMIT = 40
 _used = {}   # user -> (day, count); best effort per instance
 
 
-def summary(user_id):
-    rows = T.fetch_rows(user_id, 120)
+def summary(user_id, token=None):
+    rows = T.fetch_rows(user_id, 120, token)
     now = datetime.now(timezone.utc)
     live = [r for r in rows if r['status'] != 'rejected']
     conf = [r for r in live if r['status'] == 'confirmed' and r.get('species')]
@@ -107,7 +107,7 @@ class handler(BaseHTTPRequestHandler):
             if c > DAILY_LIMIT:
                 return self._json(429, {'error': 'daily limit'})
             _used[user['id']] = (day, c)
-            text, err = ask_claude(q, summary(user['id']), lang)
+            text, err = ask_claude(q, summary(user['id'], auth[7:].strip()), lang)
             if err == 'not configured':
                 return self._json(503, {'error': 'not configured'})
             if err:
