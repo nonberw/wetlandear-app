@@ -251,3 +251,6 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
   main { padding: 0; max-width: none; }
   .card { box-shadow: none; border: 0; padding: 0; }
 }
+
+/* play button of an event card stays a compact round button */
+.evc > .btn[data-a="play"] { align-self: start; width: 48px; min-width: 48px; height: 48px; padding: 0; border-radius: 50%; }
