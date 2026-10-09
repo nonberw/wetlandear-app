@@ -57,7 +57,7 @@
   function getClip(id) {
     return tx('readonly', function (s) { return s.get(id); }).then(function (b) { return b ? new Int16Array(b) : null; }).catch(function () { return null; }).then(function (c) {
       if (c || !window.WESync) return c;
-      return window.WESync.downloadClip(id).then(function (cloud) { if (cloud) putClip(id, cloud); return cloud; });
+      var dd = state.dets.filter(function (x) { return x.id === id; })[0]; return window.WESync.downloadClip(id, dd && dd.uid).then(function (cloud) { if (cloud) putClip(id, cloud); return cloud; });
     });
   }
   function delClip(id) { return tx('readwrite', function (s) { return s.delete(id); }).catch(function () { }); }

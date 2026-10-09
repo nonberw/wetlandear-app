@@ -81,6 +81,11 @@
       "maxDuration": 30,
       "memory": 512,
       "includeFiles": "{lib/**,js/species-ru.js}"
+    },
+    "api/alert.py": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "lib/**"
     }
   },
   "crons": [

@@ -374,5 +374,14 @@
  "Скопировано": "Copied",
  "Выделите и скопируйте вручную": "Select and copy it by hand",
  "Не удалось создать ключ. Возможно, администратор ещё не применил обновление базы.": "Could not create the key. The administrator may not have applied the database update yet.",
- "Ключи пока недоступны: администратору нужно применить обновление базы данных.": "Keys are not available yet: the administrator needs to apply the database update."
+ "Ключи пока недоступны: администратору нужно применить обновление базы данных.": "Keys are not available yet: the administrator needs to apply the database update.",
+ "Отчёт для заповедника (PDF)": "Report for the reserve (PDF)",
+ "Виды, станции, график и тревоги за выбранный период. Откроется окно печати: выберите «Сохранить как PDF».": "Species, stations, a chart and alerts for the chosen period. The print window opens: choose \"Save as PDF\".",
+ "С": "From",
+ "По": "To",
+ "Создать PDF": "Create PDF",
+ "Команда": "Team",
+ "Общий журнал для заповедника или группы: участники видят события, записи и аудио друг друга. Владелец управляет людьми, редактор проверяет события, наблюдатель только смотрит.": "A shared journal for a reserve or a group: members see each other's events, recordings and audio. The owner manages people, an editor reviews events, a viewer only watches.",
+ "Мгновенные тревоги: выкл": "Instant alerts: off",
+ "Мгновенные тревоги: вкл": "Instant alerts: on"
 }); })();

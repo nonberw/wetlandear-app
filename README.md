@@ -35,3 +35,9 @@ Both act for one signed-in person on their own data. Shared logic: `lib/actions.
   `claude mcp add --transport http wetlandear https://app.wetlandear.tech/mcp --header "Authorization: Bearer we_..."`.
   Tools: get_overview, list_events, list_species, get_alerts, morning_report, journal_summary, next_to_review, review_event, list_stations, add_station, update_station, remove_station. Only the SHA-256 of a key is stored.
 - One-time database update: run `supabase/003_bot_and_mcp.sql` in the Supabase SQL editor (key table, narrow grants for the server role).
+
+## Alerts, seasons, PDF, teams
+- **Instant alerts** (`api/alert.py`): when the app syncs an event that looks like a gunshot or engine noise, the server re-checks it and writes to the person's Telegram and to teammates with alerts on. Switch in Profile > Telegram.
+- **Seasons and years** (`js/more.js`, Calendar screen): events and confirmed species per month by year, first arrival of each species per year with the shift in days, activity by hour per season.
+- **PDF report** (Report screen): choose a period, the app builds species, stations (with a plot), chart and alerts and opens the print dialog (Save as PDF). Nothing leaves the device.
+- **Teams** (Profile > Team, `supabase/004_teams_and_alerts.sql`): organisations with owner, editor and viewer roles and a join code. Members share events, recordings and audio; editors may review events; every change of people goes through database functions. Run the SQL once (after 003).

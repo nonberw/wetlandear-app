@@ -165,6 +165,7 @@
     <div class="legend"><span>меньше</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>больше</span></div>
     <p class="hint" id="dayInfo">Нажмите на день, чтобы увидеть подробности.</p>
   </div>
+  <div class="card" id="seasonsCard" hidden></div>
   <div class="card">
     <div class="res-head"><h2>Первые обнаружения сезона</h2><button class="link" data-go="log">Весь журнал</button></div>
     <div class="tbl-wrap"><table class="tbl" id="season"><thead><tr><th>Вид</th><th>Впервые</th><th>Последний раз</th><th>Событий</th></tr></thead><tbody></tbody></table></div>
@@ -229,6 +230,11 @@
     <a class="btn" id="repTg" target="_blank" rel="noopener">Telegram</a>
     <button class="btn" id="repPrint">Печать / PDF</button>
   </div>
+  <div class="card no-print" id="pdfCard">
+    <h2>Отчёт для заповедника (PDF)</h2>
+    <p class="hint">Виды, станции, график и тревоги за выбранный период. Откроется окно печати: выберите «Сохранить как PDF».</p>
+    <div class="row wrap"><label class="dt">С <input type="date" id="pdfFrom"></label><label class="dt">По <input type="date" id="pdfTo"></label><button class="btn primary" id="pdfGo">Создать PDF</button></div>
+  </div>
 </section>
 
 <!-- PROFILE -->
@@ -262,6 +268,11 @@
       <h2>Утренний отчёт в Telegram</h2>
       <p class="hint">Каждое утро в 07:00 по Астане бот пришлёт короткий отчёт: кто пел, новые виды, тревоги, молчащие станции.</p>
       <div id="tgBody"></div>
+    </div>
+    <div class="card" id="teamCard">
+      <h2>Команда</h2>
+      <p class="hint">Общий журнал для заповедника или группы: участники видят события, записи и аудио друг друга. Владелец управляет людьми, редактор проверяет события, наблюдатель только смотрит.</p>
+      <div id="teamBody"></div>
     </div>
     <div class="card" id="mcpCard">
       <h2>ИИ-ассистенты (MCP)</h2>
@@ -343,5 +354,7 @@
 <script src="js/vendor/leaflet.js"></script>
 <script src="js/app.js"></script>
 <script src="js/extras.js"></script>
+<script src="js/more.js"></script>
+<div id="pdfPaper" aria-hidden="true"></div>
 </body>
 </html>

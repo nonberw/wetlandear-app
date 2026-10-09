@@ -45,28 +45,44 @@
   }
   function detFromRow(r) {
     return { id: r.id, recId: r.rec_id, ts: r.ts, t0: r.t0, t1: r.t1, fLow: r.f_low, fHigh: r.f_high, fPeak: r.f_peak, snr: r.snr, status: r.status, species: r.species, suggest: r.suggest, sound: r.sound, emb: r.emb,
-      station: r.station, lat: r.lat, lon: r.lon, reviewed: r.reviewed_at, clip: 'cloud' };
+      station: r.station, lat: r.lat, lon: r.lon, reviewed: r.reviewed_at, clip: 'cloud', uid: r.user_id };
   }
-  function recFromRow(r) { return { id: r.id, name: r.name, start: r.started_at, dur: r.duration, station: r.station, lat: r.lat, lon: r.lon }; }
+  function recFromRow(r) { return { id: r.id, name: r.name, start: r.started_at, dur: r.duration, station: r.station, lat: r.lat, lon: r.lon, uid: r.user_id }; }
 
   /* ---------- push ---------- */
   function chunks(a, n) { var o = []; for (var i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; }
   function pushAll() {
     if (!user) return Promise.resolve();
-    var st = S.get(), recs = st.recs.filter(function (r) { return !r.demo; }).map(recRow), dets = st.dets.filter(function (d) { return !d.demo; }).map(detRow);
+    var st = S.get(), mine = function (x) { return !x.demo && (!x.uid || x.uid === user.id); }, recs = st.recs.filter(mine).map(recRow), dets = st.dets.filter(mine).map(detRow);
     var p = Promise.resolve();
     if (recs.length) p = p.then(function () { return sb.from('recordings').upsert(recs).then(check); });
     chunks(dets, 400).forEach(function (c) { p = p.then(function () { return sb.from('detections').upsert(c).then(check); }); });
-    return p;
+    return p.then(function () { maybeAlert(st.dets); });
   }
-  function pushDet(d) { if (!user || d.demo) return Promise.resolve(); return sb.from('detections').upsert(detRow(d)).then(check).catch(function () { }); }
+  function pushDet(d) {
+    if (!user || d.demo) return Promise.resolve();
+    if (d.uid && d.uid !== user.id) /* a teammate's event: editors may only change the review */
+      return sb.from('detections').update({ status: d.status, species: d.species || null, reviewed_at: d.reviewed || null }).eq('id', d.id).then(check).catch(function () { });
+    return sb.from('detections').upsert(detRow(d)).then(check).then(function () { maybeAlert([d]); }).catch(function () { });
+  }
+  /* instant Telegram alert for a fresh possible gunshot or engine noise; the server re-checks everything */
+  function alertedIds() { try { return JSON.parse(localStorage.getItem('we.alerted') || '[]'); } catch (e) { return []; } }
+  function maybeAlert(dets) {
+    if (!user || !session) return;
+    var done = alertedIds(), now = Date.now();
+    var ids = dets.filter(function (d) { return !d.demo && d.status !== 'rejected' && (!d.uid || d.uid === user.id) && S.threatOf(d) && now - new Date(d.ts) < 3 * 36e5 && done.indexOf(d.id) < 0; }).map(function (d) { return d.id; }).slice(0, 20);
+    if (!ids.length) return;
+    fetch('/api/alert', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ids }) }).then(function (r) {
+      if (r.ok) try { localStorage.setItem('we.alerted', JSON.stringify(done.concat(ids).slice(-300))); } catch (e) { }
+    }).catch(function () { });
+  }
   function uploadClip(id, int16) {
     if (!user) return Promise.resolve();
     return sb.storage.from('clips').upload(user.id + '/' + id + '.wav', D.wavBlob(int16 && Float32Array.from(int16, function (v) { return v / 32768; }), D.SR), { upsert: true, contentType: 'audio/wav' }).catch(function () { });
   }
-  function downloadClip(id) {
+  function downloadClip(id, owner) {
     if (!user) return Promise.resolve(null);
-    return sb.storage.from('clips').download(user.id + '/' + id + '.wav').then(function (r) {
+    return sb.storage.from('clips').download((owner || user.id) + '/' + id + '.wav').then(function (r) {
       if (r.error || !r.data) return null;
       return r.data.arrayBuffer().then(function (ab) { return new Int16Array(ab.slice(44)); });
     }).catch(function () { return null; });
@@ -86,6 +102,9 @@
         if (!local) { st.dets.push(detFromRow(r)); added++; return; }
         if (r.reviewed_at && (!local.reviewed || r.reviewed_at > local.reviewed) && local.status !== r.status) { local.status = r.status; local.species = r.species; local.reviewed = r.reviewed_at; }
       });
+      var seenDet = {}, seenRec = {}; res[1].data.forEach(function (r) { seenDet[r.id] = 1; }); res[0].data.forEach(function (r) { seenRec[r.id] = 1; });
+      st.dets = st.dets.filter(function (d) { return !d.uid || d.uid === user.id || seenDet[d.id]; });   /* left a team: its data leaves this device */
+      st.recs = st.recs.filter(function (r) { return !r.uid || r.uid === user.id || seenRec[r.id]; });
       S.save(); S.libReset(); return added;
     });
   }
@@ -98,7 +117,12 @@
   function status() { return { busy: busy, last: lastSync }; }
 
   /* ---------- Telegram morning report ---------- */
-  function tgGet() { return sb.from('telegram_links').select('chat_id,enabled,lang,code').eq('user_id', user.id).maybeSingle().then(function (r) { if (r.error) throw r.error; return r.data; }); }
+  function tgGet() {
+    return sb.from('telegram_links').select('chat_id,enabled,lang,code,alerts').eq('user_id', user.id).maybeSingle().then(function (r) {
+      if (!r.error) return r.data;
+      return sb.from('telegram_links').select('chat_id,enabled,lang,code').eq('user_id', user.id).maybeSingle().then(function (r2) { if (r2.error) throw r2.error; return r2.data; });   /* database update not applied yet */
+    });
+  }
   function tgCode() { var a = new Uint8Array(12); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
   function tgConnect(lang) {
     var code = tgCode();
@@ -125,7 +149,19 @@
   }
   function keyRemove(hash) { return sb.from('api_tokens').delete().eq('token_hash', hash).then(function (r) { if (r.error) throw r.error; }); }
 
+  /* ---------- teams ---------- */
+  function rpc(name, args) { return sb.rpc(name, args || {}).then(function (r) { if (r.error) throw r.error; return r.data; }); }
+  function orgList() { return rpc('my_orgs'); }
+  function orgPeople(id) { return rpc('org_people', { p_org: id }); }
+  function orgCreate(name) { return rpc('create_org', { p_name: name }); }
+  function orgJoin(code) { return rpc('join_org', { p_code: code }); }
+  function orgRole(org, uid, role) { return rpc('set_member_role', { p_org: org, p_user: uid, p_role: role }); }
+  function orgRemove(org, uid) { return rpc('remove_member', { p_org: org, p_user: uid }); }
+  function orgCode(org) { return rpc('new_join_code', { p_org: org }); }
+  function orgDelete(org) { return rpc('delete_org', { p_org: org }); }
+
   window.WESync = {
+    orgList: orgList, orgPeople: orgPeople, orgCreate: orgCreate, orgJoin: orgJoin, orgRole: orgRole, orgRemove: orgRemove, orgCode: orgCode, orgDelete: orgDelete,
     keyList: keyList, keyCreate: keyCreate, keyRemove: keyRemove,
     tgGet: tgGet, tgConnect: tgConnect, tgSet: tgSet, tgRemove: tgRemove, tgTest: tgTest, init: init, ready: ready, onChange: onChange, signIn: signIn, signOut: signOut, me: me, token: token, getProfile: getProfile, saveProfile: saveProfile,
     syncNow: syncNow, pushDet: pushDet, pushAll: pushAll, uploadClip: uploadClip, downloadClip: downloadClip, status: status };

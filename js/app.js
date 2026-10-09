@@ -571,9 +571,10 @@
       if (row && row.chat_id) {
         box.innerHTML = '<p><span class="chip ok">' + esc(T('Подключено')) + '</span> ' + esc(row.enabled ? T('Отчёты включены') : T('Отчёты выключены')) + '</p>' +
           '<div class="row wrap"><button class="btn" id="tgToggle">' + esc(row.enabled ? T('Выключить') : T('Включить')) + '</button><button class="btn" id="tgLang">' + esc(T('Язык отчёта') + ': ' + row.lang.toUpperCase()) + '</button>' +
-          '<button class="btn" id="tgTest">' + esc(T('Отправить тестовый отчёт')) + '</button><button class="btn no" id="tgOff">' + esc(T('Отключить Telegram')) + '</button></div>';
+          '<button class="btn" id="tgAlerts">' + esc(row.alerts === false ? T('Мгновенные тревоги: выкл') : T('Мгновенные тревоги: вкл')) + '</button>' + '<button class="btn" id="tgTest">' + esc(T('Отправить тестовый отчёт')) + '</button><button class="btn no" id="tgOff">' + esc(T('Отключить Telegram')) + '</button></div>';
         $('#tgToggle').addEventListener('click', function () { WESync.tgSet({ enabled: !row.enabled }).then(renderTg).catch(function () { toast(T('Не удалось сохранить')); }); });
         $('#tgLang').addEventListener('click', function () { WESync.tgSet({ lang: row.lang === 'ru' ? 'en' : 'ru' }).then(renderTg).catch(function () { toast(T('Не удалось сохранить')); }); });
+        $('#tgAlerts').addEventListener('click', function () { WESync.tgSet({ alerts: row.alerts === false }).then(renderTg).catch(function () { toast(T('Не удалось сохранить')); }); });
         $('#tgTest').addEventListener('click', function () {
           toast(T('Отправляю...'));
           WESync.tgTest().then(function (r) { toast(r.status === 200 ? (r.body.sent ? T('Отчёт отправлен в Telegram') : T('За 7 дней событий нет, отправлять нечего')) : T('Не удалось отправить. Проверьте подключение.')); }).catch(function () { toast(T('Не удалось отправить. Проверьте подключение.')); });
