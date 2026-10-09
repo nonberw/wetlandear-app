@@ -25,6 +25,7 @@
       $('#obOk').addEventListener('click', function () { markSeen(); ob.remove(); });
     } else if (!show && ob) ob.remove();
 
+    hoursCard();
     var from = Date.now() - 7 * 864e5, list = S.get().dets.filter(function (d) { return d.status !== 'rejected' && +new Date(d.ts) >= from && S.threatOf(d); })
       .sort(function (a, b) { return a.ts < b.ts ? 1 : -1; });
     var tc = $('#threatCard');
@@ -37,6 +38,42 @@
       var t = S.threatOf(d);
       return '<li><span class="dotk alert"></span><span class="nm">' + THREAT[t.kind] + ' ' + Math.round(t.score * 100) + '%' + (d.demo ? '<span class="badge">демо</span>' : '') + '<small>' + esc(d.station || '') + '</small></span><span class="tm">' + A.fmtDT(d.ts) + '</span></li>';
     }).join('') + '</ul><p class="hint">Это подсказка модели YAMNet по звуку, а не доказательство. Прослушайте запись, прежде чем принимать меры.</p>';
+  }
+
+  /* ---------- activity by hour (dawn chorus) ---------- */
+  function hoursCard() {
+    var host = $('#pulseBars').closest('.card'), from = Date.now() - 7 * 864e5, h = [], i, tot = 0, mx = 0, peak = 0;
+    for (i = 0; i < 24; i++) h.push(0);
+    S.get().dets.forEach(function (d) { if (d.status === 'rejected') return; var t = new Date(d.ts); if (+t < from) return; h[t.getHours()]++; tot++; });
+    var card = $('#hoursCard');
+    if (!tot) { if (card) card.remove(); return; }
+    h.forEach(function (n, k) { if (n > mx) { mx = n; peak = k; } });
+    if (!card) { card = document.createElement('div'); card.id = 'hoursCard'; card.className = 'card'; host.parentNode.insertBefore(card, host.nextSibling); }
+    var pad = function (n) { return ('0' + n).slice(-2); };
+    card.innerHTML = '<h2>Активность по часам</h2><div class="hours" role="img" aria-label="Число событий по часам суток">' +
+      h.map(function (n, k) { return '<i class="' + (k === peak ? 'pk' : '') + '" style="--h:' + Math.round(n / mx * 100) + '%" title="' + pad(k) + ':00, событий: ' + n + '"></i>'; }).join('') +
+      '</div><div class="hours-ax"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>' +
+      '<p class="hint">За 7 дней. Пик активности: ' + pad(peak) + ':00 до ' + pad((peak + 1) % 24) + ':00. Утренний хор птиц обычно виден как высокий пик на рассвете.</p>';
+  }
+
+  /* ---------- life list: every species you have confirmed ---------- */
+  function lifeCard() {
+    var view = $('#v-calendar'), m = {};
+    S.get().dets.forEach(function (d) {
+      if (d.status !== 'confirmed' || !d.species) return;
+      var t = +new Date(d.ts), r = m[d.species] || (m[d.species] = { id: d.species, first: t, last: t, n: 0, ref: 0 });
+      if (t < r.first) r.first = t; if (t > r.last) r.last = t; r.n++; if (S.level(d) === 'reference') r.ref++;
+    });
+    var list = Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.n - a.n; });
+    var card = $('#lifeCard');
+    if (!card) { card = document.createElement('div'); card.id = 'lifeCard'; card.className = 'card'; view.appendChild(card); }
+    var known = S.SPECIES.length, seen = list.filter(function (r) { return S.species[r.id]; }).length;
+    card.innerHTML = '<h2>Список видов</h2><p class="hint">Все виды, которые вы подтвердили. В справочнике Коргальжына: ' + seen + ' из ' + known + '.</p>' +
+      '<div class="bar" style="grid-template-columns:1fr 60px"><i style="--w:' + Math.round(seen / known * 100) + '%"></i><em>' + seen + '/' + known + '</em></div>' +
+      (list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Вид</th><th>Впервые</th><th>Событий</th></tr></thead><tbody>' + list.map(function (r) {
+        var s = S.species[r.id];
+        return '<tr><td>' + esc(spName(r.id)) + (r.ref ? ' <span class="badge ok">эталон ' + r.ref + '</span>' : '') + (s ? '<small>' + esc(s.lat) + '</small>' : '<small>вид из ваших образцов</small>') + '</td><td>' + A.fmtD(new Date(r.first)) + '</td><td>' + r.n + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<p class="hint">Пока пусто.</p>');
   }
 
   /* ---------- map ---------- */
@@ -122,6 +159,7 @@
   window.addEventListener('appinstalled', function () { $('#installCard').hidden = true; });
 
   function onShow(view) {
+    if (view === 'calendar') lifeCard();
     if (view === 'map') renderMap();
     if (view === 'report') buildReport();
   }

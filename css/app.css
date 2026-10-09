@@ -257,3 +257,12 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 
 /* suggestion learned from your own confirmed recordings */
 .sug.own { background: #EAF7EF; border-color: #8FD1AB; color: var(--ok); }
+
+.recsum { margin: 12px 0 4px; padding: 12px 14px; border-radius: 14px; background: var(--sky); font-size: .95rem; }
+
+/* activity by hour */
+.hours { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; align-items: end; height: 110px; margin-top: 8px; }
+.hours i { display: block; height: max(3px, var(--h)); border-radius: 4px 4px 0 0; background: #C5D6FF; transition: height .8s var(--ease); }
+.hours i.pk { background: var(--blue); }
+.hours-ax { display: flex; justify-content: space-between; font: 500 .68rem var(--mono); color: var(--soft); margin-top: 4px; }
+#lifeCard .bar { margin: 8px 0 14px; }
