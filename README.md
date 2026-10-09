@@ -41,3 +41,10 @@ Both act for one signed-in person on their own data. Shared logic: `lib/actions.
 - **Seasons and years** (`js/more.js`, Calendar screen): events and confirmed species per month by year, first arrival of each species per year with the shift in days, activity by hour per season.
 - **PDF report** (Report screen): choose a period, the app builds species, stations (with a plot), chart and alerts and opens the print dialog (Save as PDF). Nothing leaves the device.
 - **Teams** (Profile > Team, `supabase/004_teams_and_alerts.sql`): organisations with owner, editor and viewer roles and a join code. Members share events, recordings and audio; editors may review events; every change of people goes through database functions. Run the SQL once (after 003).
+
+## Reports, species card, science export, activity log
+- **Weekly and monthly digests** (`lib/report.py`, `api/morning.py`): Monday morning a week digest, on the 1st a month digest with a PDF (reportlab, bundled DejaVu fonts), compared with the previous period. Bot: `/week`, `/month`, `/pdf`, `/pdf month`.
+- **MCP**: `period_report` (facts for a report written by the assistant) and `export_occurrences` (Darwin Core or eBird CSV).
+- **Species card** (tap a species in the life list or the season tables): photo and text from Wikipedia (REST summary API, cached), your own records, stations and hours.
+- **Export for science** (Data screen): Darwin Core (GBIF) and eBird record format built on the device from confirmed events; coordinates can be rounded to 0.1 degree for rare species. `js/species-sci.js` (scientific names) is generated from `models/head.npz` by `make_species_js.py` in wetlandear-ml.
+- **Activity log** (Profile > Team): who confirmed, rejected or corrected which event (`supabase/005_review_log.sql`, trigger on detections).

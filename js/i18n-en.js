@@ -383,5 +383,8 @@
  "Команда": "Team",
  "Общий журнал для заповедника или группы: участники видят события, записи и аудио друг друга. Владелец управляет людьми, редактор проверяет события, наблюдатель только смотрит.": "A shared journal for a reserve or a group: members see each other's events, recordings and audio. The owner manages people, an editor reviews events, a viewer only watches.",
  "Мгновенные тревоги: выкл": "Instant alerts: off",
- "Мгновенные тревоги: вкл": "Instant alerts: on"
+ "Мгновенные тревоги: вкл": "Instant alerts: on",
+ "Экспорт для науки": "Export for science",
+ "Подтверждённые человеком наблюдения в форматах, которые понимают GBIF (Darwin Core) и eBird. Видам без латинского названия файл не включает. Файл создаётся на вашем устройстве.": "Observations confirmed by a person in formats that GBIF (Darwin Core) and eBird understand. Species without a scientific name are left out. The file is created on your device.",
+ "Округлить координаты до 0,1° (около 10 км): так принято для редких видов": "Round coordinates to 0.1° (about 10 km): common practice for rare species"
 }); })();

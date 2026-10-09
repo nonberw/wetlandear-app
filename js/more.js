@@ -48,7 +48,7 @@
         ids.map(function (id) {
           var f = first[id], shift = '';
           if (py && f[ly] && f[py]) { var dd = doy(f[ly]) - doy(f[py]); shift = '<td class="' + (dd < 0 ? 'early' : dd > 0 ? 'late' : '') + '">' + (dd > 0 ? '+' : dd < 0 ? '−' : '') + Math.abs(dd) + ' ' + esc(L('дн', 'd')) + '</td>'; } else if (py) shift = '<td>–</td>';
-          return '<tr><td>' + esc(sname(id)) + '</td>' + years.map(function (y) { return '<td>' + (f[y] ? dm(f[y]) : '–') + '</td>'; }).join('') + shift + '</tr>';
+          return '<tr data-sp="' + esc(id) + '"><td>' + esc(sname(id)) + '</td>' + years.map(function (y) { return '<td>' + (f[y] ? dm(f[y]) : '–') + '</td>'; }).join('') + shift + '</tr>';
         }).join('') + '</tbody></table></div><p class="hint">' + esc(L('Дата первой подтверждённой встречи вида в году. Сдвиг: на сколько дней раньше (−) или позже (+) вид появился, чем в прошлом году.', 'Date of the first confirmed record of a species in a year. Shift: how many days earlier (−) or later (+) than the year before.')) + '</p>';
     }
     /* activity by hour, per season of the year */
@@ -133,7 +133,7 @@
           '<div class="row wrap">' + (o.role === 'owner' ? '<button class="btn" data-a="code">' + esc(L('Новый код', 'New code')) + '</button><button class="btn no" data-a="del">' + esc(L('Удалить команду', 'Delete team')) + '</button>' : '') +
           '<button class="btn" data-a="leave">' + esc(L('Выйти из команды', 'Leave team')) + '</button></div></div>';
       }).join('');
-      box.innerHTML = html + '<div class="row wrap"><input id="orgName" maxlength="80" placeholder="' + esc(L('Название команды или заповедника', 'Team or reserve name')) + '"><button class="btn primary" id="orgNew">' + esc(L('Создать команду', 'Create team')) + '</button></div>' +
+      box.innerHTML = html + (orgs.length ? '<div class="row wrap"><button class="btn" id="auditBtn">' + esc(L('Журнал действий', 'Activity log')) + '</button></div><div id="auditBox" hidden></div>' : '') + '<div class="row wrap"><input id="orgName" maxlength="80" placeholder="' + esc(L('Название команды или заповедника', 'Team or reserve name')) + '"><button class="btn primary" id="orgNew">' + esc(L('Создать команду', 'Create team')) + '</button></div>' +
         '<div class="row wrap"><input id="orgCode" maxlength="20" placeholder="' + esc(L('Код приглашения', 'Invite code')) + '"><button class="btn" id="orgJoin">' + esc(L('Вступить по коду', 'Join with a code')) + '</button></div>';
       orgs.forEach(function (o) {
         WESync.orgPeople(o.id).then(function (ps) {
@@ -165,6 +165,126 @@
       });
     }).catch(function () { box.innerHTML = '<p class="hint">' + esc(L('Команды пока недоступны: администратору нужно применить обновление базы данных.', 'Teams are not available yet: the administrator needs to apply the database update.')) + '</p>'; });
   }
+
+  /* ---------- species card: photo and text from Wikipedia, your own records ---------- */
+  function sciOf(id, dets) {
+    var s = S.species[id]; if (s) return s.lat;
+    var com = String(id).replace(/^x:/, ''); if (window.WE_SCI && window.WE_SCI[com]) return window.WE_SCI[com];
+    for (var i = 0; i < dets.length; i++) { var g = dets[i].suggest; if (g && g.sci && S.sugId(g) === id) return g.sci; }
+    return '';
+  }
+  function wiki(lng, title) {
+    var key = 'we.wiki2.' + lng + '.' + title, hit = null;
+    try { hit = JSON.parse(localStorage.getItem(key)); } catch (e) { }
+    if (hit) return Promise.resolve(hit);
+    return fetch('https://' + lng + '.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_')), { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || j.type === 'disambiguation' || !j.extract) return null;
+        var o = { img: j.thumbnail && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(j.thumbnail.source) ? j.thumbnail.source : '', text: j.extract, url: (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || '' };
+        try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) { }
+        return o;
+      }).catch(function () { return null; });
+  }
+  function closeCard() { var m = $('#spModal'); if (m) m.remove(); document.removeEventListener('keydown', escClose); }
+  function escClose(e) { if (e.key === 'Escape') closeCard(); }
+  function speciesCard(id) {
+    closeCard();
+    var dets = S.get().dets.filter(function (d) { return d.status === 'confirmed' && d.species === id; }).sort(function (a, b) { return a.ts < b.ts ? 1 : -1; });
+    var sci = sciOf(id, S.get().dets), s = S.species[id];
+    var ru = s ? s.ru : (window.WE_RU && window.WE_RU[String(id).replace(/^x:/, '')]) || '', en = s ? s.en : String(id).replace(/^x:/, '');
+    var stn = {}, hrs = new Array(24).fill(0);
+    dets.forEach(function (d) { var k = d.station || '–'; stn[k] = (stn[k] || 0) + 1; hrs[new Date(d.ts).getHours()]++; });
+    var hm = Math.max.apply(null, hrs.concat([1]));
+    var m = document.createElement('div'); m.id = 'spModal'; m.className = 'modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+    m.innerHTML = '<div class="modal-box"><button class="modal-x" aria-label="' + esc(L('Закрыть', 'Close')) + '">×</button><div class="sp-photo" id="spPhoto"></div><h2>' + esc(sname(id)) + '</h2><p class="hint">' + esc([ru && lang() === 'en' ? ru : '', en && lang() === 'ru' ? en : '', sci ? sci : ''].filter(Boolean).join(' · ')) + '</p><p class="sp-text" id="spText"></p><div class="sp-mine" id="spMine"></div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function (e) { if (e.target === m || e.target.closest('.modal-x')) closeCard(); });
+    document.addEventListener('keydown', escClose);
+    var mine = dets.length ? '<h3>' + esc(L('Ваши наблюдения', 'Your records')) + '</h3><p>' + esc(L('Подтверждено событий', 'Confirmed events')) + ': <b>' + dets.length + '</b> · ' + esc(L('Впервые', 'First')) + ': ' + dm(+new Date(dets[dets.length - 1].ts)) + '.' + new Date(dets[dets.length - 1].ts).getFullYear() + ' · ' + esc(L('Последний раз', 'Last')) + ': ' + dm(+new Date(dets[0].ts)) + '.' + new Date(dets[0].ts).getFullYear() + '</p>' +
+      '<p>' + esc(L('Станции', 'Stations')) + ': ' + Object.keys(stn).map(function (k) { return esc(k) + ' (' + stn[k] + ')'; }).join(', ') + '</p>' +
+      '<div class="hours" style="height:54px">' + hrs.map(function (n, k) { return '<i style="--h:' + Math.round(n / hm * 100) + '%" title="' + p2(k) + ':00 · ' + n + '"></i>'; }).join('') + '</div><div class="hours-ax"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>' : '<p class="hint">' + esc(L('Подтверждённых наблюдений этого вида пока нет.', 'No confirmed records of this species yet.')) + '</p>';
+    $('#spMine', m).innerHTML = mine;
+    var lng = lang(), titles = [sci, en].filter(Boolean);
+    var tryT = function (i) { if (i >= titles.length) return Promise.resolve(null); return wiki(lng, titles[i]).then(function (r) { return r || (lng === 'ru' ? wiki('en', titles[i]) : null) || null; }).then(function (r) { return r || tryT(i + 1); }); };
+    tryT(0).then(function (r) {
+      if (!$('#spModal')) return;
+      if (!r) { $('#spText').textContent = L('Описание не нашлось.', 'No description found.'); return; }
+      if (r.img) { var im = document.createElement('img'); im.alt = sname(id); im.src = r.img; im.referrerPolicy = 'no-referrer'; $('#spPhoto').appendChild(im); }
+      $('#spText').textContent = r.text;
+      if (r.url) { var a = document.createElement('a'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = L(' Википедия', ' Wikipedia'); $('#spText').appendChild(a); }
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-sp]'); if (!el || e.target.closest('a,button,select,input')) return;
+    speciesCard(el.getAttribute('data-sp'));
+  });
+
+  /* ---------- export for science: Darwin Core (GBIF) and eBird record format ---------- */
+  function csvCell(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function download(name, rows) {
+    var blob = new Blob(['\ufeff' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  function exportScience(fmt) {
+    var from = new Date($('#exFrom').value + 'T00:00:00'), to = new Date($('#exTo').value + 'T23:59:59'), blur = $('#exBlur').checked;
+    var me = window.WESync && WESync.me(), who = (me && me.name) || '';
+    var all = S.get().dets, dets = all.filter(function (d) { var t = +new Date(d.ts); return d.status === 'confirmed' && d.species && !d.demo && t >= +from && t <= +to; }).sort(function (a, b) { return a.ts < b.ts ? -1 : 1; });
+    var rnd = function (v) { return v == null ? '' : (blur ? Math.round(v * 10) / 10 : Math.round(v * 1e5) / 1e5); };
+    var rows, skipped = 0, ok = 0;
+    if (fmt === 'ebird') {
+      rows = [['Common Name', 'Genus', 'Species', 'Number', 'Species Comments', 'Location Name', 'Latitude', 'Longitude', 'Date', 'Start Time', 'State/Province', 'Country Code', 'Protocol', 'Number of Observers', 'Duration (Min)', 'All Obs Reported (Y/N)', 'Distance Traveled (Miles)', 'Area Covered (Acres)', 'Breeding Code', 'Observation Details', 'Checklist Comments']];
+      var g = {};
+      dets.forEach(function (d) {
+        var sci = sciOf(d.species, all); if (sci.indexOf(' ') < 0) { skipped++; return; }
+        var t = new Date(d.ts), key = (d.station || 'WetlandEar station') + '|' + t.toDateString(), e = g[key] = g[key] || { st: d.station || 'WetlandEar station', d: t, lat: d.lat, lon: d.lon, sp: {} };
+        var s = e.sp[d.species] = e.sp[d.species] || { sci: sci, n: 0, time: p2(t.getHours()) + ':' + p2(t.getMinutes()) }; s.n++;
+      });
+      Object.keys(g).forEach(function (k) { var e = g[k]; Object.keys(e.sp).forEach(function (id) { var s = e.sp[id], parts = s.sci.split(' '); ok++;
+        rows.push([S.species[id] ? S.species[id].en : String(id).replace(/^x:/, ''), parts[0], parts[1], 'X', 'Detected by passive acoustic monitoring, confirmed by a person (' + s.n + ' events)', e.st, rnd(e.lat), rnd(e.lon), p2(e.d.getMonth() + 1) + '/' + p2(e.d.getDate()) + '/' + e.d.getFullYear(), s.time, '', 'KZ', 'Incidental', 1, '', 'N', '', '', '', '', 'WetlandEar']); }); });
+    } else {
+      rows = [['occurrenceID', 'basisOfRecord', 'eventDate', 'scientificName', 'vernacularName', 'taxonRank', 'decimalLatitude', 'decimalLongitude', 'geodeticDatum', 'countryCode', 'recordedBy', 'identifiedBy', 'identificationVerificationStatus', 'samplingProtocol', 'occurrenceRemarks', 'locality', 'dateIdentified', 'informationWithheld']];
+      dets.forEach(function (d) {
+        var sci = sciOf(d.species, all); if (sci.indexOf(' ') < 0) { skipped++; return; }
+        var sg = d.suggest, remark = sg ? 'Species suggested by the model (' + (sg.common || sg.sci || '') + ' ' + Math.round((sg.conf || 0) * 100) + '%) and confirmed by a person.' : 'Species identified by a person from a recorded sound.';
+        ok++; rows.push(['wetlandear:' + d.id, 'HumanObservation', d.ts, sci, S.species[d.species] ? S.species[d.species].en : String(d.species).replace(/^x:/, ''), 'species', rnd(d.lat), rnd(d.lon), 'WGS84', 'KZ', who, who, 'verified by a person', 'passive acoustic monitoring, automated detection (BirdNET, WetlandEar model) with human verification', remark, d.station || '', d.reviewed || '', blur ? 'coordinates rounded to 0.1 degree' : '']);
+      });
+    }
+    if (!ok) { A.toast(L('Нет подтверждённых видов за период', 'No confirmed species in this period')); return; }
+    download('wetlandear-' + (fmt === 'ebird' ? 'ebird' : 'darwin-core') + '-' + $('#exFrom').value + '_' + $('#exTo').value + '.csv', rows);
+    A.toast(L('Выгружено записей: ', 'Records exported: ') + ok + (skipped ? L('. Без латинского названия пропущено: ', '. Skipped without a scientific name: ') + skipped : ''));
+  }
+  function initExport() {
+    if (!$('#exGbif')) return;
+    var y = new Date().getFullYear(), iso = function (d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); };
+    $('#exFrom').value = y + '-01-01'; $('#exTo').value = iso(new Date());
+    $('#exGbif').addEventListener('click', function () { exportScience('dwc'); });
+    $('#exEbird').addEventListener('click', function () { exportScience('ebird'); });
+  }
+
+  /* ---------- team audit log ---------- */
+  function renderLog(box) {
+    box.innerHTML = '<p class="hint">' + esc(L('Загружаю...', 'Loading...')) + '</p>';
+    WESync.reviewLog().then(function (rows) {
+      if (!rows.length) { box.innerHTML = '<p class="hint">' + esc(L('Журнал пока пуст. Он ведётся с момента обновления базы.', 'The log is empty so far. It records changes made after the database update.')) + '</p>'; return; }
+      var act = function (r) {
+        var sp = r.species ? sname(r.species) : '';
+        if (r.action === 'confirmed') return r.prev_status === 'confirmed' && r.prev_species ? L('исправил(а) вид: ', 'corrected the species: ') + sname(r.prev_species) + ' → ' + sp : L('подтвердил(а): ', 'confirmed: ') + sp;
+        if (r.action === 'rejected') return L('отклонил(а) событие', 'rejected an event');
+        return L('вернул(а) событие на проверку', 'sent an event back to review');
+      };
+      var fmt = function (t) { var d = new Date(t); return p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); };
+      box.innerHTML = '<ul class="audit">' + rows.map(function (r) { return '<li><span class="t">' + esc(fmt(r.at)) + '</span> <b>' + esc(r.actor_name || '?') + '</b> ' + esc(act(r)) + (r.via === 'server' ? ' <span class="chip">' + esc(L('бот/ИИ', 'bot/AI')) + '</span>' : '') + '</li>'; }).join('') + '</ul><div class="row wrap"><button class="btn" id="auditCsv">' + esc(L('Скачать CSV', 'Download CSV')) + '</button></div>';
+      $('#auditCsv', box).addEventListener('click', function () { download('wetlandear-review-log.csv', [['time', 'person', 'action', 'species', 'previous_status', 'previous_species', 'event_id', 'via']].concat(rows.map(function (r) { return [r.at, r.actor_name, r.action, r.species ? sname(r.species) : '', r.prev_status, r.prev_species ? sname(r.prev_species) : '', r.detection_id, r.via]; }))); });
+    }).catch(function () { box.innerHTML = '<p class="hint">' + esc(L('Журнал пока недоступен: администратору нужно применить обновление базы данных.', 'The log is not available yet: the administrator needs to apply the database update.')) + '</p>'; });
+  }
+  function initAudit() {
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('#auditBtn'); if (!b) return;
+      var box = $('#auditBox'); box.hidden = !box.hidden; if (!box.hidden) renderLog(box);
+    });
+  }
+  initExport(); initAudit();
 
   var prev = window.WEX && window.WEX.onShow;
   if (window.WEX) window.WEX.onShow = function (v) {

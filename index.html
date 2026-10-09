@@ -300,6 +300,13 @@
     </div>
     <div class="row"><button class="btn" id="geoBtn">Определить место</button><button class="btn primary" id="stSave">Сохранить</button><span class="hint" id="stMsg"></span></div>
   </div>
+  <div class="card" id="exCard">
+    <h2>Экспорт для науки</h2>
+    <p class="hint">Подтверждённые человеком наблюдения в форматах, которые понимают GBIF (Darwin Core) и eBird. Видам без латинского названия файл не включает. Файл создаётся на вашем устройстве.</p>
+    <div class="row wrap"><label class="dt">С <input type="date" id="exFrom"></label><label class="dt">По <input type="date" id="exTo"></label></div>
+    <label class="chk"><input type="checkbox" id="exBlur" checked> Округлить координаты до 0,1° (около 10 км): так принято для редких видов</label>
+    <div class="row wrap"><button class="btn primary" id="exGbif">Darwin Core (GBIF)</button><button class="btn" id="exEbird">eBird</button></div>
+  </div>
   <div class="card">
     <h2>Выгрузка</h2>
     <p class="hint">Данные хранятся на этом устройстве. Если вы вошли через Google, сохранённый журнал копируется в ваш аккаунт и доступен на других устройствах, больше никому.</p>
@@ -348,6 +355,7 @@
 <script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
 <script src="js/species-ru.js"></script>
+<script src="js/species-sci.js"></script>
 <script src="js/dsp.js"></script>
 <script src="js/store.js"></script>
 <script src="js/sync.js"></script>

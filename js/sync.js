@@ -160,7 +160,10 @@
   function orgCode(org) { return rpc('new_join_code', { p_org: org }); }
   function orgDelete(org) { return rpc('delete_org', { p_org: org }); }
 
+  function reviewLog() { return sb.from('review_log').select('*').order('at', { ascending: false }).limit(150).then(function (r) { if (r.error) throw r.error; return r.data; }); }
+
   window.WESync = {
+    reviewLog: reviewLog,
     orgList: orgList, orgPeople: orgPeople, orgCreate: orgCreate, orgJoin: orgJoin, orgRole: orgRole, orgRemove: orgRemove, orgCode: orgCode, orgDelete: orgDelete,
     keyList: keyList, keyCreate: keyCreate, keyRemove: keyRemove,
     tgGet: tgGet, tgConnect: tgConnect, tgSet: tgSet, tgRemove: tgRemove, tgTest: tgTest, init: init, ready: ready, onChange: onChange, signIn: signIn, signOut: signOut, me: me, token: token, getProfile: getProfile, saveProfile: saveProfile,

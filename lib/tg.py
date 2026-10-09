@@ -86,6 +86,27 @@ def send(chat_id, text):
     return tg('sendMessage', {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_web_page_preview': True})
 
 
+def send_document(chat_id, data, filename, caption=''):
+    """Telegram sendDocument as multipart/form-data."""
+    import uuid
+    b = uuid.uuid4().hex
+    parts = []
+    for k, v in (('chat_id', str(chat_id)), ('caption', caption), ('parse_mode', 'HTML')):
+        parts.append(('--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n' % (b, k, v)).encode('utf-8'))
+    parts.append(('--%s\r\nContent-Disposition: form-data; name="document"; filename="%s"\r\nContent-Type: application/pdf\r\n\r\n' % (b, filename)).encode('utf-8'))
+    parts.append(data)
+    parts.append(('\r\n--%s--\r\n' % b).encode())
+    token = env('TELEGRAM_BOT_TOKEN').strip()
+    req = urllib.request.Request('https://api.telegram.org/bot%s/sendDocument' % token, method='POST', data=b''.join(parts), headers={'Content-Type': 'multipart/form-data; boundary=' + b})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return {'ok': False, 'error_code': e.code}
+    except Exception:
+        return {'ok': False}
+
+
 def esc(s):
     return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 

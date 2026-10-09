@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
 import tg as T  # noqa: E402
 import actions as A  # noqa: E402
+import report as R  # noqa: E402
 
 VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05']
 SERVER = {'name': 'wetlandear', 'version': '1.0.0'}
@@ -41,6 +42,10 @@ TOOLS = [
     ('next_to_review', 'Events waiting for review, those with a model suggestion first.', obj({'count': {'type': 'integer', 'minimum': 1, 'maximum': 20}, 'lang': LANG}), RO),
     ('review_event', 'Confirm or reject one event. To confirm without "species" the model suggestion is used. Always check with the person before confirming.',
      obj({'event_id': {'type': 'string'}, 'status': {'type': 'string', 'enum': ['confirmed', 'rejected', 'auto']}, 'species': {'type': 'string'}}, ['event_id', 'status']), WR),
+    ('period_report', 'Facts for a report on a period, computed from the journal and compared with the previous period of the same length: totals, species with counts and first/last dates, new species, stations, silent stations, alerts, peak hour. Write the report text from this, do not invent numbers.',
+     obj({'from_date': {'type': 'string', 'description': 'YYYY-MM-DD, local date (Astana)'}, 'to_date': {'type': 'string', 'description': 'YYYY-MM-DD, inclusive'}, 'lang': LANG}, ['from_date', 'to_date']), RO),
+    ('export_occurrences', 'Confirmed observations of a period as CSV: Darwin Core (for GBIF) or eBird record format. Only species with a scientific name are included.',
+     obj({'from_date': {'type': 'string'}, 'to_date': {'type': 'string'}, 'format': {'type': 'string', 'enum': ['dwc', 'ebird']}}, ['from_date', 'to_date']), RO),
     ('list_stations', 'The recording stations of this account.', obj({}), RO),
     ('add_station', 'Add a recording station.', obj({'name': {'type': 'string'}, 'lat': {'type': 'number'}, 'lon': {'type': 'number'}}, ['name']), {'readOnlyHint': False, 'destructiveHint': False, 'openWorldHint': False}),
     ('update_station', 'Rename a station or change its coordinates.', obj({'station_id': {'type': 'string'}, 'name': {'type': 'string'}, 'lat': {'type': 'number'}, 'lon': {'type': 'number'}}, ['station_id']), WR),
@@ -75,6 +80,20 @@ def call(uid, name, a):
         return {'waiting_total': total, 'events': [A.det_view(r, lang) for r in rows]}
     if name == 'review_event':
         return A.review(uid, str(a.get('event_id', '')), a.get('status'), a.get('species'))
+    if name in ('period_report', 'export_occurrences'):
+        from datetime import timedelta
+        try:
+            fa = datetime.strptime(str(a.get('from_date')), '%Y-%m-%d').replace(tzinfo=R.TZ)
+            tb = datetime.strptime(str(a.get('to_date')), '%Y-%m-%d').replace(tzinfo=R.TZ) + timedelta(days=1)
+        except ValueError:
+            return 'Dates must look like 2026-09-01.'
+        if not 0 < (tb - fa).days <= 366:
+            return 'The period must be between 1 and 366 days.'
+        if name == 'period_report':
+            return R.markdown(R.period_data(uid, fa, tb), lang)
+        who = ((T.sb('profiles?select=display_name&id=eq.%s' % uid) or [{}])[0] or {}).get('display_name') or ''
+        csv_text, n, skipped = A.occurrences(uid, fa, tb, a.get('format') or 'dwc', who)
+        return '%d records exported, %d skipped (no scientific name).\n\n%s' % (n, skipped, csv_text)
     if name == 'list_stations':
         return A.stations(uid)
     if name == 'add_station':

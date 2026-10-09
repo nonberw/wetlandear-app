@@ -9,11 +9,36 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
 import tg as T  # noqa: E402
+import report as R  # noqa: E402
+from datetime import datetime, timezone
+
+
+def send_digest(link, kind, with_pdf):
+    """Weekly (Monday) or monthly (1st) digest. The previous period of the same kind is used for comparison."""
+    uid, lang, chat = link['user_id'], link['lang'], link['chat_id']
+    a, b = R.week_window() if kind == 'week' else R.month_window()
+    d = R.period_data(uid, a, b)
+    if not d['events']:
+        return False
+    ok = T.send(chat, R.digest_text(d, lang, kind)).get('ok')
+    if with_pdf and ok:
+        who = ''
+        try:
+            who = ((T.sb('profiles?select=display_name,organization&id=eq.%s' % uid) or [{}])[0] or {})
+            who = ', '.join(x for x in (who.get('display_name'), who.get('organization')) if x)
+        except Exception:
+            pass
+        pdf = R.make_pdf(d, lang, who, kind)
+        name = 'wetlandear-%s-%s.pdf' % (kind, a.strftime('%Y-%m-%d'))
+        cap = R.W.get(lang, R.W['ru'])['caption'].format(p='%s – %s' % (a.strftime('%d.%m'), (b - R.timedelta(days=1)).strftime('%d.%m.%Y')))
+        T.send_document(chat, pdf, name, cap)
+    return bool(ok)
 
 
 def run_all():
     links = T.sb('telegram_links?select=user_id,chat_id,lang&enabled=eq.true&chat_id=not.is.null&limit=1000') or []
-    sent = skipped = failed = 0
+    sent = skipped = failed = digests = 0
+    today = R.local_midnight(datetime.now(timezone.utc))
     for l in links:
         try:
             rep = T.build_report(l['user_id'], l['lang'])
@@ -23,13 +48,20 @@ def run_all():
             res = T.send(l['chat_id'], rep)
             if res.get('ok'):
                 sent += 1
+                try:
+                    if today.weekday() == 0:
+                        digests += send_digest(l, 'week', False)
+                    if today.day == 1:
+                        digests += send_digest(l, 'month', True)
+                except Exception:
+                    pass
             else:
                 failed += 1
                 if res.get('error_code') in (400, 403):   # chat gone or bot blocked: stop trying
                     T.sb('telegram_links?user_id=eq.%s' % l['user_id'], method='PATCH', body={'enabled': False})
         except Exception:
             failed += 1
-    return {'links': len(links), 'sent': sent, 'skipped': skipped, 'failed': failed}
+    return {'links': len(links), 'sent': sent, 'skipped': skipped, 'failed': failed, 'digests': digests}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -58,6 +90,11 @@ class handler(BaseHTTPRequestHandler):
             rows = T.sb('telegram_links?select=chat_id,lang&user_id=eq.%s&limit=1' % user['id']) or []
             if not rows or not rows[0].get('chat_id'):
                 return self._json(409, {'error': 'telegram not connected'})
+            n = int(self.headers.get('Content-Length', '0') or 0)
+            req = json.loads(self.rfile.read(n)) if 0 < n < 1000 else {}
+            if req.get('kind') in ('week', 'month'):
+                link = {'user_id': user['id'], 'lang': rows[0]['lang'], 'chat_id': rows[0]['chat_id']}
+                return self._json(200, {'sent': send_digest(link, req['kind'], bool(req.get('pdf')))})
             rep = T.build_report(user['id'], rows[0]['lang'])
             T.send(rows[0]['chat_id'], rep or T.TXT.get(rows[0]['lang'], T.TXT['ru'])['none7'])
             return self._json(200, {'sent': bool(rep)})

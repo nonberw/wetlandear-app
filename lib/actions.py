@@ -231,3 +231,67 @@ def allow_ask(uid, limit=40):
     c = c + 1 if d == day else 1
     _used[uid] = (day, c)
     return c <= limit
+
+
+# ---------- data export for science (Darwin Core for GBIF, record format for eBird) ----------
+_SCI = None
+
+
+def sci_of(sid, suggest=None):
+    """Scientific name of a species id: reference list, the model's own suggestion, or the generated name table."""
+    global _SCI
+    if sid in SCI:
+        return SCI[sid]
+    if suggest and suggest.get('sci') and (sug_id(suggest) == sid or True):
+        if sug_id(suggest) == sid:
+            return suggest['sci']
+    if _SCI is None:
+        try:
+            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'js', 'species-sci.js')
+            js = open(p, encoding='utf-8').read()
+            _SCI = json.loads(js[js.index('{'):js.rindex('}') + 1])
+        except Exception:
+            _SCI = {}
+    return _SCI.get(str(sid)[2:] if str(sid).startswith('x:') else str(sid), '')
+
+
+def occurrences(uid, start, end, fmt='dwc', who=''):
+    """Confirmed observations of a period as CSV text. fmt: dwc (Darwin Core) or ebird. Returns (csv_text, exported, skipped_without_scientific_name)."""
+    import csv
+    import io
+    qs = ('detections?select=id,ts,species,suggest,station,lat,lon,reviewed_at&user_id=eq.%s&status=eq.confirmed&species=not.is.null&ts=gte.%s&ts=lt.%s&order=ts.asc&limit=20000'
+          % (uid, q(start.isoformat()), q(end.isoformat())))
+    rows = T.sb(qs) or []
+    out, skipped = io.StringIO(), 0
+    w = csv.writer(out)
+    if fmt == 'ebird':
+        w.writerow(['Common Name', 'Genus', 'Species', 'Number', 'Species Comments', 'Location Name', 'Latitude', 'Longitude', 'Date', 'Start Time', 'State/Province', 'Country Code', 'Protocol', 'Number of Observers', 'Duration (Min)', 'All Obs Reported (Y/N)', 'Distance Traveled (Miles)', 'Area Covered (Acres)', 'Breeding Code', 'Observation Details', 'Checklist Comments'])
+        groups = {}
+        for r in rows:
+            sci = sci_of(r['species'], r.get('suggest'))
+            if not sci or ' ' not in sci:
+                skipped += 1
+                continue
+            t = T.parse_ts(r['ts']).astimezone(timezone(timedelta(hours=5)))
+            g = groups.setdefault((r.get('station') or 'WetlandEar station', t.strftime('%m/%d/%Y'), r.get('lat'), r.get('lon')), {})
+            e = g.setdefault(r['species'], {'sci': sci, 'n': 0, 'time': t.strftime('%H:%M')})
+            e['n'] += 1
+        for (loc, date, lat, lon), sp in groups.items():
+            for sid, e in sp.items():
+                genus, _, species = e['sci'].partition(' ')
+                w.writerow([T.name_of(sid, 'en'), genus, species.split(' ')[0], 'X', 'Detected by passive acoustic monitoring, confirmed by a person (%d events)' % e['n'], loc, lat if lat is not None else '', lon if lon is not None else '', date, e['time'], '', 'KZ', 'Incidental', 1, '', 'N', '', '', '', '', 'WetlandEar'])
+        return out.getvalue(), sum(len(v) for v in groups.values()), skipped
+    w.writerow(['occurrenceID', 'basisOfRecord', 'eventDate', 'scientificName', 'vernacularName', 'taxonRank', 'decimalLatitude', 'decimalLongitude', 'geodeticDatum', 'countryCode', 'recordedBy', 'identifiedBy',
+                'identificationVerificationStatus', 'samplingProtocol', 'occurrenceRemarks', 'locality', 'dateIdentified'])
+    n = 0
+    for r in rows:
+        sci = sci_of(r['species'], r.get('suggest'))
+        if not sci or ' ' not in sci:
+            skipped += 1
+            continue
+        sug = r.get('suggest') or {}
+        remark = ('Species suggested by the model (%s %.0f%%) and confirmed by a person.' % (sug_name(sug, 'en'), float(sug.get('conf') or 0) * 100)) if sug else 'Species identified by a person from a recorded sound.'
+        w.writerow(['wetlandear:' + r['id'], 'HumanObservation', r['ts'], sci, T.name_of(r['species'], 'en'), 'species', r['lat'] if r.get('lat') is not None else '', r['lon'] if r.get('lon') is not None else '', 'WGS84', 'KZ',
+                    who, who, 'verified by a person', 'passive acoustic monitoring, automated detection (BirdNET, WetlandEar model) with human verification', remark, r.get('station') or '', r.get('reviewed_at') or ''])
+        n += 1
+    return out.getvalue(), n, skipped

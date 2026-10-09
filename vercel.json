@@ -9,7 +9,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://lh3.googleusercontent.com https://tile.openstreetmap.org https://*.tile.openstreetmap.org; media-src 'self' blob:; connect-src 'self' https://vflyedmortnampzdenpf.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://lh3.googleusercontent.com https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://upload.wikimedia.org https://thumb.wikimedia.org; media-src 'self' blob:; connect-src 'self' https://vflyedmortnampzdenpf.supabase.co https://en.wikipedia.org https://ru.wikipedia.org; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         },
         {
           "key": "Strict-Transport-Security",
@@ -63,14 +63,14 @@
       "includeFiles": "models/**"
     },
     "api/morning.py": {
-      "maxDuration": 60,
-      "memory": 512,
-      "includeFiles": "{lib/**,js/species-ru.js}"
+      "maxDuration": 120,
+      "memory": 1024,
+      "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
     },
     "api/telegram.py": {
       "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "{lib/**,js/species-ru.js}"
+      "memory": 1024,
+      "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
     },
     "api/ask.py": {
       "maxDuration": 60,
@@ -79,8 +79,8 @@
     },
     "api/mcp.py": {
       "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "{lib/**,js/species-ru.js}"
+      "memory": 1024,
+      "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
     },
     "api/alert.py": {
       "maxDuration": 30,

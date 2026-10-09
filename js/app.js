@@ -465,7 +465,7 @@
     $('#dayInfo').textContent = max ? 'Нажмите на день, чтобы увидеть подробности.' : 'Пока нет данных. Сохраните события в журнал или посмотрите демо на экране «Пульс».';
     var rows = S.seasonTable();
     $('#season tbody').innerHTML = rows.length ? rows.map(function (r) {
-      var s = S.species[r.id]; return '<tr><td>' + esc(spName(r.id)) + (s ? '<small>' + esc(s.lat) + '</small>' : '') + '</td><td>' + fmtD(r.first) + '</td><td>' + fmtD(r.last) + '</td><td>' + r.n + '</td></tr>';
+      var s = S.species[r.id]; return '<tr data-sp="' + esc(r.id) + '"><td>' + esc(spName(r.id)) + (s ? '<small>' + esc(s.lat) + '</small>' : '') + '</td><td>' + fmtD(r.first) + '</td><td>' + fmtD(r.last) + '</td><td>' + r.n + '</td></tr>';
     }).join('') : '<tr><td colspan="4" class="hint">Подтверждённых видов в этом году пока нет.</td></tr>';
   }
   $('#heat').addEventListener('click', function (e) {

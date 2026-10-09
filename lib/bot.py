@@ -4,11 +4,12 @@ from datetime import timedelta, timezone
 
 import tg as T
 import actions as A
+import report as R
 
 B = {
     'ru': {
         'help': ('<b>WetlandEar</b>: ваш журнал в Telegram\n\n'
-                 '/today утренний отчёт сейчас\n/week отчёт за неделю\n/review проверять события кнопками\n/recent последние события\n/species кто пел за 30 дней\n'
+                 '/today утренний отчёт сейчас\n/week отчёт за неделю\n/month отчёт за прошлый месяц\n/pdf PDF за прошлую неделю, /pdf month за месяц\n/review проверять события кнопками\n/recent последние события\n/species кто пел за 30 дней\n'
                  '/pulse пульс\n/alerts тревоги\n/stations станции\n/addstation Название широта долгота\n/confirm id вид, /reject id\n/lang ru|en язык\n/stop и /resume утренний отчёт\n'
                  '/unlink отключить этот чат\n\nМожно просто написать вопрос обычными словами: «Кто пел чаще всего на этой неделе?»'),
         'recent': 'Последние события', 'none': 'Событий нет.', 'species': 'Виды за {d} дней (подтверждены человеком)', 'nospecies': 'Подтверждённых видов пока нет.',
@@ -21,7 +22,7 @@ B = {
         'thinking': 'Смотрю журнал...'},
     'en': {
         'help': ('<b>WetlandEar</b>: your journal in Telegram\n\n'
-                 '/today morning report now\n/week report for the week\n/review check events with buttons\n/recent latest events\n/species who sang in the last 30 days\n'
+                 '/today morning report now\n/week report for the week\n/month report for last month\n/pdf PDF for last week, /pdf month for last month\n/review check events with buttons\n/recent latest events\n/species who sang in the last 30 days\n'
                  '/pulse pulse\n/alerts alerts\n/stations stations\n/addstation Name lat lon\n/confirm id species, /reject id\n/lang ru|en language\n/stop and /resume morning report\n'
                  '/unlink disconnect this chat\n\nOr just ask in plain words: "Which species sang most this week?"'),
         'recent': 'Latest events', 'none': 'No events.', 'species': 'Species in {d} days (confirmed by a person)', 'nospecies': 'No confirmed species yet.',
@@ -74,6 +75,22 @@ def handle_command(link, chat, text):
     if cmd in ('/today', '/report', '/week'):
         rep = T.build_report(uid, lang, 168 if cmd == '/week' else 24)
         return T.send(chat, rep or T.TXT[lang]['none7'])
+    if cmd in ('/month', '/pdf'):
+        kind = 'month' if (cmd == '/month' or arg.lower().startswith('m') or arg.lower().startswith('мес')) else 'week'
+        a, b = R.month_window() if kind == 'month' else R.week_window()
+        d = R.period_data(uid, a, b)
+        if not d['events']:
+            return T.send(chat, T.TXT[lang]['none7'])
+        T.send(chat, R.digest_text(d, lang, kind))
+        if cmd == '/pdf':
+            who = ''
+            try:
+                p = (T.sb('profiles?select=display_name,organization&id=eq.%s' % uid) or [{}])[0] or {}
+                who = ', '.join(x for x in (p.get('display_name'), p.get('organization')) if x)
+            except Exception:
+                pass
+            return T.send_document(chat, R.make_pdf(d, lang, who, kind), 'wetlandear-%s-%s.pdf' % (kind, a.strftime('%Y-%m-%d')), R.W[lang]['caption'].format(p='%s – %s' % (a.strftime('%d.%m'), (b - R.timedelta(days=1)).strftime('%d.%m.%Y'))))
+        return None
     if cmd == '/recent':
         rows = A.detections(uid, 14, limit=10, lang=lang)
         return T.send(chat, '<b>%s</b>\n' % t['recent'] + '\n'.join(event_line(d, lang) for d in rows) if rows else t['none'])

@@ -74,7 +74,7 @@
       '<div class="bar" style="grid-template-columns:1fr 60px"><i style="--w:' + Math.round(seen / known * 100) + '%"></i><em>' + seen + '/' + known + '</em></div>' +
       (list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Вид</th><th>Впервые</th><th>Событий</th></tr></thead><tbody>' + list.map(function (r) {
         var s = S.species[r.id];
-        return '<tr><td>' + esc(spName(r.id)) + (r.ref ? ' <span class="badge ok">' + esc(T('эталон')) + ' ' + r.ref + '</span>' : '') + (s ? '<small>' + esc(s.lat) + '</small>' : '<small>вид из ваших образцов</small>') + '</td><td>' + A.fmtD(new Date(r.first)) + '</td><td>' + r.n + '</td></tr>';
+        return '<tr data-sp="' + esc(r.id) + '"><td>' + esc(spName(r.id)) + (r.ref ? ' <span class="badge ok">' + esc(T('эталон')) + ' ' + r.ref + '</span>' : '') + (s ? '<small>' + esc(s.lat) + '</small>' : '<small>вид из ваших образцов</small>') + '</td><td>' + A.fmtD(new Date(r.first)) + '</td><td>' + r.n + '</td></tr>';
       }).join('') + '</tbody></table></div>' : '<p class="hint">Пока пусто.</p>');
   }
 
