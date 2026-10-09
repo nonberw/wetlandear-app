@@ -42,9 +42,16 @@ def env(name):
     return os.environ.get(name, '')
 
 
+def webhook_secret():
+    """Derived from the bot token, so nobody has to invent or store a separate webhook secret. Empty if the token is not set."""
+    import hashlib
+    tok = env('TELEGRAM_BOT_TOKEN').strip()
+    return hashlib.sha256((tok + ':wetlandear-webhook').encode()).hexdigest()[:48] if tok else ''
+
+
 def sb(path, method='GET', body=None, key=None, token=None, prefer=None):
     """Supabase REST call. With the secret key it bypasses row security, so only use it for the owner of the data."""
-    k = key or env('SUPABASE_SECRET_KEY')
+    k = key or env('SUPABASE_SECRET_KEY').strip()
     headers = {'apikey': k, 'Authorization': 'Bearer ' + (token or k), 'Content-Type': 'application/json'}
     if prefer:
         headers['Prefer'] = prefer
@@ -64,7 +71,7 @@ def user_from_token(token):
 
 
 def tg(method, payload):
-    token = env('TELEGRAM_BOT_TOKEN')
+    token = env('TELEGRAM_BOT_TOKEN').strip()
     req = urllib.request.Request('https://api.telegram.org/bot%s/%s' % (token, method), method='POST', headers={'Content-Type': 'application/json'}, data=json.dumps(payload).encode())
     try:
         with urllib.request.urlopen(req, timeout=15) as r:

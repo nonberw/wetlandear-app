@@ -43,7 +43,7 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        secret = T.env('CRON_SECRET')
+        secret = T.env('CRON_SECRET').strip()
         got = self.headers.get('Authorization', '')
         if not secret or not hmac.compare_digest(got, 'Bearer ' + secret):
             return self._json(401, {'error': 'unauthorized'})

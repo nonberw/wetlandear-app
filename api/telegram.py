@@ -58,9 +58,12 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
-        secret = T.env('TELEGRAM_WEBHOOK_SECRET')
         got = self.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
-        if not secret or not hmac.compare_digest(got, secret):
+        ok = False
+        for secret in (T.webhook_secret(), T.env('TELEGRAM_WEBHOOK_SECRET')):
+            if secret and hmac.compare_digest(got, secret):
+                ok = True
+        if not ok:
             return self._ok(403, b'forbidden')
         try:
             n = int(self.headers.get('Content-Length', '0'))
