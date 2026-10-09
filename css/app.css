@@ -200,3 +200,18 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 .sug b { font: 600 .76rem var(--mono); margin-left: 4px; }
 .sug:active { transform: scale(.96); }
 @media (hover: hover) { .sug:hover { background: #fff; } }
+
+/* account */
+.auth { margin-left: auto; display: flex; align-items: center; }
+.auth + .back { margin-left: 8px; }
+.btn.sm { min-height: 40px; padding: 0 16px; font-size: .88rem; }
+.me { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 3px 14px 3px 3px; border-radius: 99px; border: 1.5px solid var(--line); background: #fff; font-weight: 700; font-size: .88rem; transition: transform .15s var(--ease), border-color .2s; }
+.me:active { transform: scale(.96); }
+@media (hover: hover) { .me:hover { border-color: var(--blue); } }
+.av { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: inline-grid; place-items: center; background: var(--sky); color: var(--blue); font-weight: 800; font-size: .8rem; flex: none; }
+.av.big { width: 72px; height: 72px; font-size: 1.4rem; }
+.prof-head { display: flex; align-items: center; gap: 16px; }
+.prof-name { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; }
+.form.form2 { grid-template-columns: 1fr 1fr; } .form.form2 label:first-child { grid-column: 1 / -1; }
+.banner.info { background: var(--sky); border-color: #BFD0FA; color: var(--ink); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+@media (max-width: 760px) { .me .mn { display: none; } .me { padding: 3px; } .back .bt { display: none; } .auth .btn.sm { padding: 0 12px; } }

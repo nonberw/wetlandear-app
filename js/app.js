@@ -48,6 +48,7 @@
     if (view === 'review') loadReview();
     if (view === 'calendar') renderCalendar();
     if (view === 'data') renderData();
+    if (view === 'profile') renderProfile();
   }
   $$('.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
   $$('[data-go]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.go); }); });
@@ -55,6 +56,7 @@
 
   function refreshChrome() {
     $('#demoBanner').hidden = !S.hasDemo();
+    $('#signBanner').hidden = !!(window.WESync && WESync.me()) || !(window.WESync && WESync.ready());
     var n = reviewQueue().length, b = $('#revCount'); b.textContent = n > 99 ? '99+' : n; b.hidden = !n;
   }
 
@@ -186,6 +188,7 @@
   function b64(i16) { var u = new Uint8Array(i16.buffer), s = '', k; for (k = 0; k < u.length; k += 8192) s += String.fromCharCode.apply(null, u.subarray(k, k + 8192)); return btoa(s); }
   function runIdentify() {
     if (!sess || !sess.events.length) { setIdState(''); return; }
+    if (!window.WESync || !WESync.token()) { setIdState('Подсказки видов доступны после входа через Google. Нажмите «Войти» вверху.'); return; }
     if (!sess.s48) { setIdState('Готовлю звук для определения...'); return; }
     var seq = ++idSeq, evs = sess.events, st = S.get().station, chain = Promise.resolve(), failed = false;
     setIdState('Модель определяет виды...');
@@ -193,12 +196,12 @@
       chain = chain.then(function () {
         if (seq !== idSeq || failed) return;
         var part = evs.slice(from, from + 10);
-        return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (e) { return b64(windowFor(e)); }) }) })
-          .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+        return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + WESync.token() }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (e) { return b64(windowFor(e)); }) }) })
+          .then(function (r) { if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; } if (!r.ok) throw new Error('http'); return r.json(); })
           .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (items, k) { part[k].suggest = items.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); }); renderEvents(); });
-      }).catch(function () { failed = true; });
+      }).catch(function (e) { failed = e && e.auth ? 'auth' : true; });
     })(from);
-    chain.then(function () { if (seq !== idSeq) return; setIdState(failed ? 'Подсказки модели недоступны сейчас. Выберите вид сами.' : 'Подсказки модели BirdNET готовы. Проверяйте их на слух и по спектрограмме.'); });
+    chain.then(function () { if (seq !== idSeq) return; setIdState(failed === 'auth' ? 'Сессия истекла. Войдите снова, чтобы получить подсказки.' : failed ? 'Подсказки модели недоступны сейчас. Выберите вид сами.' : 'Подсказки модели BirdNET готовы. Проверяйте их на слух и по спектрограмме.'); });
   }
   var rafPlay = 0, stopAt = null;
   function playRange(t0, t1) {
@@ -407,6 +410,51 @@
   $('#wipe').addEventListener('click', function () {
     if (confirm('Удалить все записи, события и настройки на этом устройстве? Это нельзя отменить.')) { S.wipe(); toast('Все данные удалены'); show('pulse'); }
   });
+
+
+  /* ---------- account ---------- */
+  function initials(n) { return (n || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase(); }
+  function avatarHtml(me, cls) {
+    return me.avatar ? '<img class="' + cls + '" src="' + esc(me.avatar) + '" alt="" referrerpolicy="no-referrer">' : '<span class="' + cls + ' ph">' + esc(initials(me.name)) + '</span>';
+  }
+  function renderAuth() {
+    var box = $('#authBox'), me = window.WESync && WESync.me();
+    if (!window.WESync || !WESync.ready()) { box.innerHTML = ''; return; }
+    box.innerHTML = me
+      ? '<button class="me" id="meBtn" aria-label="Профиль">' + avatarHtml(me, 'av') + '<span class="mn">' + esc(me.name.split(' ')[0]) + '</span></button>'
+      : '<button class="btn primary sm" id="signInBtn">Войти через Google</button>';
+    var b = $('#meBtn'); if (b) b.addEventListener('click', function () { show('profile'); });
+    var s = $('#signInBtn'); if (s) s.addEventListener('click', doSignIn);
+    refreshChrome();
+  }
+  function doSignIn() { WESync.signIn().catch(function () { toast('Не удалось начать вход. Попробуйте ещё раз.'); }); }
+  function renderProfile() {
+    var me = window.WESync && WESync.me();
+    $('#profOut').hidden = !!me; $('#profIn').hidden = !me;
+    if (!me) return;
+    $('#profAvatar').innerHTML = avatarHtml(me, 'av big'); $('#profName').textContent = me.name; $('#profEmail').textContent = me.email || '';
+    var dets = S.get().dets.filter(function (d) { return !d.demo && d.status !== 'rejected'; }), spp = {};
+    dets.forEach(function (d) { if (d.status === 'confirmed' && d.species) spp[d.species] = 1; });
+    $('#pfEvents').textContent = dets.length; $('#pfConf').textContent = dets.filter(function (d) { return d.status === 'confirmed'; }).length; $('#pfSpp').textContent = Object.keys(spp).length;
+    var st = WESync.status(); $('#pfSync').textContent = st.busy ? 'Синхронизирую...' : st.last ? 'Последняя синхронизация: ' + fmtDT(st.last.toISOString()) : 'Журнал хранится у вас на устройстве и копируется в облако.';
+    WESync.getProfile().then(function (p) { $('#pfName').value = p.display_name || me.name || ''; $('#pfOrg').value = p.organization || ''; $('#pfRole').value = p.role || ''; }).catch(function () { $('#pfName').value = me.name || ''; });
+  }
+  $('#signBannerBtn').addEventListener('click', doSignIn);
+  $('#profSignIn').addEventListener('click', doSignIn);
+  $('#pfOut').addEventListener('click', function () { WESync.signOut().then(function () { toast('Вы вышли'); show('pulse'); }); });
+  $('#pfSave').addEventListener('click', function () {
+    var me = WESync.me(); if (!me) return;
+    WESync.saveProfile({ display_name: $('#pfName').value.trim().slice(0, 60), organization: $('#pfOrg').value.trim().slice(0, 80), role: $('#pfRole').value.trim().slice(0, 60), avatar_url: me.avatar })
+      .then(function () { $('#pfMsg').textContent = 'Сохранено'; toast('Профиль сохранён'); }).catch(function () { $('#pfMsg').textContent = 'Не удалось сохранить'; });
+  });
+  $('#pfSyncBtn').addEventListener('click', function () {
+    toast('Синхронизирую...');
+    WESync.syncNow(false).then(function () { toast('Готово'); renderProfile(); refreshChrome(); if (current === 'pulse') renderPulse(); }).catch(function () { toast('Не удалось синхронизировать'); });
+  });
+  if (window.WESync) {
+    WESync.onChange(function () { renderAuth(); if (current === 'profile') renderProfile(); if (current === 'pulse') renderPulse(); if (current === 'review') loadReview(); if (sess && sess.s48) scheduleIdentify(0); });
+    WESync.init().then(renderAuth).catch(function () { });
+  }
 
   /* ---------- start ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () { });

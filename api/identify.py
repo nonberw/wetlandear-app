@@ -4,6 +4,8 @@ from http.server import BaseHTTPRequestHandler
 import base64
 import json
 import os
+import time
+import urllib.request
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
@@ -11,7 +13,30 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models')
 SAMPLES = 144000
 MAX_WINDOWS = 12
 DEFAULT_LAT, DEFAULT_LON = 50.6, 69.0   # Korgalzhyn
+SUPABASE_URL = 'https://vflyedmortnampzdenpf.supabase.co'
+SUPABASE_KEY = 'sb_publishable_PnI4L7VszIqaFrWHnvbHRg_dyB3ZeVn'   # public by design
 _state = {}
+_tokens = {}   # token -> expiry, so a burst of requests checks the account only once
+
+
+def signed_in(token):
+    """True if the token belongs to a real signed-in user (asked of Supabase Auth)."""
+    if not token or len(token) > 4000:
+        return False
+    now = time.time()
+    if _tokens.get(token, 0) > now:
+        return True
+    req = urllib.request.Request(SUPABASE_URL + '/auth/v1/user', headers={'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + token})
+    try:
+        with urllib.request.urlopen(req, timeout=6) as r:
+            ok = r.status == 200
+    except Exception:
+        ok = False
+    if ok:
+        if len(_tokens) > 500:
+            _tokens.clear()
+        _tokens[token] = now + 120
+    return ok
 
 
 def _load():
@@ -67,6 +92,9 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            auth = self.headers.get('Authorization', '')
+            if not auth.startswith('Bearer ') or not signed_in(auth[7:].strip()):
+                return self._send(401, {'error': 'sign in required'})
             n = int(self.headers.get('Content-Length', '0'))
             if n <= 0 or n > 4_000_000:
                 return self._send(413, {'error': 'body size'})

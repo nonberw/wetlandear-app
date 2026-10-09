@@ -33,7 +33,7 @@
   function blank() { return { recs: [], dets: [], station: { name: 'Телефон 1', lat: null, lon: null }, seq: 1 }; }
   function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.dets) return s; } catch (e) { } return blank(); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { alert('Не хватает места в хранилище браузера. Выгрузите журнал и очистите старые данные.'); } }
-  function uid(p) { return p + Date.now().toString(36) + (state.seq++).toString(36); }
+  function uid(p) { return p + Date.now().toString(36) + (state.seq++).toString(36) + Math.random().toString(36).slice(2, 6); }
 
   /* ---------- audio clips in IndexedDB ---------- */
   var dbp = null;
@@ -49,7 +49,12 @@
   }
   function tx(mode, fn) { return idb().then(function (db) { return new Promise(function (res, rej) { var t = db.transaction('clips', mode), q = fn(t.objectStore('clips')); t.oncomplete = function () { res(q && q.result); }; t.onerror = function () { rej(t.error); }; }); }); }
   function putClip(id, int16) { return tx('readwrite', function (s) { return s.put(int16.buffer, id); }).catch(function () { }); }
-  function getClip(id) { return tx('readonly', function (s) { return s.get(id); }).then(function (b) { return b ? new Int16Array(b) : null; }).catch(function () { return null; }); }
+  function getClip(id) {
+    return tx('readonly', function (s) { return s.get(id); }).then(function (b) { return b ? new Int16Array(b) : null; }).catch(function () { return null; }).then(function (c) {
+      if (c || !window.WESync) return c;
+      return window.WESync.downloadClip(id).then(function (cloud) { if (cloud) putClip(id, cloud); return cloud; });
+    });
+  }
   function delClip(id) { return tx('readwrite', function (s) { return s.delete(id); }).catch(function () { }); }
 
   /* ---------- records ---------- */
@@ -64,10 +69,12 @@
       if (clips && clips[i]) { d.clip = true; putClip(d.id, clips[i]); }
     });
     save();
+    if (window.WESync) window.WESync.pushAll().then(function () { dets.forEach(function (d, i) { if (clips && clips[i]) window.WESync.uploadClip(d.id, clips[i]); }); }).catch(function () { });
   }
   function setStatus(id, status, species) {
     var d = state.dets.filter(function (x) { return x.id === id; })[0]; if (!d) return;
     d.status = status; if (species !== undefined) d.species = species; d.reviewed = new Date().toISOString(); save();
+    if (window.WESync) window.WESync.pushDet(d);
   }
 
   /* ---------- Reserve Pulse ---------- */

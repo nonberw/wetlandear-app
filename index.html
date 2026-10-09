@@ -28,11 +28,13 @@
     <button data-view="calendar"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Календарь</span></button>
     <button data-view="data"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg><span>Данные</span></button>
   </nav>
+  <div class="auth" id="authBox"></div>
   <a class="back" href="https://wetlandear.tech" aria-label="Вернуться на сайт wetlandear.tech"><span aria-hidden="true">&larr;</span> <span class="bt">Сайт</span></a>
   <span class="ver">v0.1 прототип</span>
 </header>
 
 <main>
+<div id="signBanner" class="banner info" hidden><span>Войдите через Google: модель подскажет виды птиц, а журнал будет доступен на всех ваших устройствах.</span> <button id="signBannerBtn" class="link">Войти</button></div>
 <div id="demoBanner" class="banner" hidden>Показаны ДЕМО-данные для примера. Это не реальные наблюдения. <button id="demoOff" class="link">Убрать демо</button></div>
 
 <!-- PULSE -->
@@ -165,6 +167,42 @@
   </div>
 </section>
 
+<!-- PROFILE -->
+<section id="v-profile" class="view" aria-labelledby="h-profile">
+  <h1 id="h-profile">Профиль</h1>
+  <div id="profOut" class="card empty" hidden>
+    <b>Вы не вошли</b>
+    <p>Войдите через Google, чтобы получать подсказки видов и синхронизировать журнал между устройствами.</p>
+    <button class="btn primary" id="profSignIn">Войти через Google</button>
+  </div>
+  <div id="profIn" hidden>
+    <div class="card prof-head">
+      <div class="avatar" id="profAvatar" aria-hidden="true"></div>
+      <div><div class="prof-name" id="profName"></div><div class="hint" id="profEmail"></div></div>
+    </div>
+    <div class="card">
+      <h2>О вас</h2>
+      <div class="form form2">
+        <label>Имя<input id="pfName" type="text" maxlength="60" autocomplete="name"></label>
+        <label>Организация<input id="pfOrg" type="text" maxlength="80" placeholder="Заповедник, вуз, школа" autocomplete="organization"></label>
+        <label>Роль<input id="pfRole" type="text" maxlength="60" placeholder="Орнитолог, рейнджер, студент"></label>
+      </div>
+      <div class="row"><button class="btn primary" id="pfSave">Сохранить</button><span class="hint" id="pfMsg"></span></div>
+    </div>
+    <div class="grid3">
+      <div class="card stat"><span>В журнале</span><b id="pfEvents">0</b><small>событий</small></div>
+      <div class="card stat"><span>Подтверждено</span><b id="pfConf">0</b><small>человеком</small></div>
+      <div class="card stat"><span>Виды</span><b id="pfSpp">0</b><small>подтверждены</small></div>
+    </div>
+    <div class="card">
+      <h2>Синхронизация</h2>
+      <p class="hint" id="pfSync">Журнал хранится у вас на устройстве и копируется в облако.</p>
+      <div class="row wrap"><button class="btn" id="pfSyncBtn">Синхронизировать</button><button class="btn no" id="pfOut">Выйти</button></div>
+      <p class="hint">Удалить аккаунт и все данные можно по письму на <a href="mailto:zzhaseka@gmail.com">zzhaseka@gmail.com</a>. Подробности в <a href="https://wetlandear.tech/privacy">политике конфиденциальности</a>.</p>
+    </div>
+  </div>
+</section>
+
 <!-- DATA -->
 <section id="v-data" class="view" aria-labelledby="h-data">
   <h1 id="h-data">Данные и станция</h1>
@@ -179,7 +217,7 @@
   </div>
   <div class="card">
     <h2>Выгрузка</h2>
-    <p class="hint">Все данные хранятся на этом устройстве. Ничего не отправляется на сервер.</p>
+    <p class="hint">Данные хранятся на этом устройстве. Если вы вошли через Google, сохранённый журнал копируется в ваш аккаунт и доступен на других устройствах, больше никому.</p>
     <div class="row wrap">
       <button class="btn" id="exCsv">Журнал, CSV</button>
       <button class="btn" id="exDwc">Darwin Core, CSV</button>
@@ -193,11 +231,11 @@
     <ol class="steps">
       <li><b>Звук</b> приводится к единому формату и превращается в спектрограмму.</li>
       <li><b>События</b> ищутся там, где сигнал заметно громче фона в диапазоне 0,8 до 10 кГц. Это поиск звука, а не определение вида.</li>
-      <li><b>Человек</b> выбирает вид и подтверждает. Так появляется «Подтверждено человеком».</li>
+      <li><b>Модель</b> BirdNET предлагает вид, но это только подсказка. <b>Человек</b> выбирает вид и подтверждает. Так появляется «Подтверждено человеком».</li>
       <li><b>Пульс</b> и календарь строятся из журнала.</li>
     </ol>
-    <p class="status-row"><span class="chip ok">Работает</span> поиск событий, журнал, пульс, календарь, выгрузка</p>
-    <p class="status-row"><span class="chip wip">В разработке</span> автоматическое определение вида, карта станций</p>
+    <p class="status-row"><span class="chip ok">Работает</span> поиск событий, подсказки видов (BirdNET, после входа), журнал, пульс, календарь, выгрузка, аккаунт и синхронизация</p>
+    <p class="status-row"><span class="chip wip">В разработке</span> карта станций, работа определения вида без интернета</p>
     <p class="status-row"><span class="chip plan">Запланировано</span> подключение станций ESP32-S3, утренний отчёт, дообучение на местных голосах</p>
   </div>
   <div class="card danger">
@@ -209,8 +247,10 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+<script src="js/vendor/supabase.js"></script>
 <script src="js/dsp.js"></script>
 <script src="js/store.js"></script>
+<script src="js/sync.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

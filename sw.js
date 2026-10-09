@@ -1,6 +1,6 @@
-/* Offline shell: the app opens without a network. Data never leaves the device. */
-var V = 'we-app-v1';
-var SHELL = ['/', 'index.html', 'css/app.css', 'js/dsp.js', 'js/store.js', 'js/app.js', 'favicon.svg', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+/* Offline shell: the app opens without a network. Account data stays in your own Supabase account. */
+var V = 'we-app-v2';
+var SHELL = ['/', 'index.html', 'css/app.css', 'js/dsp.js', 'js/store.js', 'js/sync.js', 'js/vendor/supabase.js', 'js/app.js', 'favicon.svg', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(V).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); })); });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== V; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); }));
