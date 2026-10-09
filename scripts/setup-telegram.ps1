@@ -1,31 +1,37 @@
-# One-time setup for the Telegram morning report. Run it yourself in PowerShell from the app folder:
-#   powershell -ExecutionPolicy Bypass -File scripts\setup-telegram.ps1
-# It asks for two secrets (typed hidden), stores them in Vercel, registers the Telegram webhook and redeploys.
-# Nothing is written to disk or to git. You need: the bot token from @BotFather and the Supabase secret key
-# (Supabase -> Project Settings -> API Keys -> Secret keys -> "default" -> Reveal/copy).
-
+# One-time setup for the Telegram morning report. You copy two secrets, the script does the rest. No typing needed:
+#   1) it waits until the Telegram bot token is in the clipboard (copy it),
+#   2) then it waits until the Supabase secret key (sb_secret_...) is in the clipboard (copy it),
+#   3) it stores both in Vercel, registers the webhook and deploys. The clipboard is cleared at the end. Nothing is saved on disk or in git.
 $ErrorActionPreference = 'Stop'
 $scope = '345s-projects-86bfc55a'
 $domain = 'https://app.wetlandear.tech'
+Set-Location (Join-Path $PSScriptRoot '..')
 
-function Read-Secret($prompt) {
-  $s = Read-Host $prompt -AsSecureString
-  $b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)
-  try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
+function Wait-Clip($pattern, $what, $seconds) {
+  Write-Host "Copy $what now (Ctrl+C on it). Waiting up to $seconds seconds..."
+  $end = (Get-Date).AddSeconds($seconds)
+  while ((Get-Date) -lt $end) {
+    try { $c = (Get-Clipboard -Raw).Trim() } catch { $c = '' }
+    if ($c -match $pattern) { return $c }
+    Start-Sleep -Milliseconds 700
+  }
+  throw "Timed out waiting for $what in the clipboard."
 }
 function Rand($n) { $bytes = New-Object byte[] $n; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes); ([BitConverter]::ToString($bytes) -replace '-', '').ToLower() }
 function Set-VercelEnv($name, $value) {
-  # remove the old value if any, then add (production). The value goes through stdin, not the command line.
   & npx --yes vercel env rm $name production --yes --scope $scope 2>$null | Out-Null
   $value | & npx --yes vercel env add $name production --scope $scope | Out-Null
-  Write-Host "  set $name"
+  Write-Host "  saved $name"
 }
 
-Write-Host 'Bot username (public, without @, e.g. wetlandear_bot):'
-$bot = Read-Host
-$token = Read-Secret 'Telegram bot token (hidden)'
-$sbKey = Read-Secret 'Supabase secret key (hidden)'
-if (-not $token -or -not $sbKey -or -not $bot) { throw 'All three values are required.' }
+$token = Wait-Clip '^\d{6,12}:[A-Za-z0-9_-]{30,}$' 'the TELEGRAM BOT TOKEN (looks like 123456789:AA...)' 300
+Write-Host ('Got the bot token (starts with ' + $token.Substring(0, 6) + '...).')
+$me = Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getMe"
+$bot = $me.result.username
+Write-Host "Bot: @$bot"
+Set-Clipboard -Value ' '
+$sbKey = Wait-Clip '^sb_secret_[A-Za-z0-9_-]{20,}$' 'the SUPABASE SECRET KEY (sb_secret_..., Supabase > Project Settings > API Keys > Secret keys)' 300
+Write-Host ('Got the Supabase key (starts with ' + $sbKey.Substring(0, 14) + '...).')
 
 $webhookSecret = Rand 24
 $cronSecret = Rand 24
@@ -34,17 +40,13 @@ Set-VercelEnv 'TELEGRAM_BOT_TOKEN' $token
 Set-VercelEnv 'SUPABASE_SECRET_KEY' $sbKey
 Set-VercelEnv 'TELEGRAM_WEBHOOK_SECRET' $webhookSecret
 Set-VercelEnv 'CRON_SECRET' $cronSecret
+Set-Clipboard -Value ' '
 
-Write-Host 'Writing the bot username into js/config.js...'
-Set-Content -Encoding UTF8 -Path (Join-Path $PSScriptRoot '..\js\config.js') -Value "/* Public settings. The Telegram bot username is public (it is in every t.me link); the bot token is a secret and lives only in Vercel. */`nwindow.WE_CONFIG = { telegramBot: '$bot' };"
-
-Write-Host 'Deploying...'
-Push-Location (Join-Path $PSScriptRoot '..')
+Write-Host 'Deploying (about a minute)...'
 & npx --yes vercel deploy --prod --yes --scope $scope | Out-Null
-Pop-Location
 
 Write-Host 'Registering the Telegram webhook...'
 $body = @{ url = "$domain/api/telegram"; secret_token = $webhookSecret; allowed_updates = @('message') } | ConvertTo-Json
 $r = Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType 'application/json' -Body $body
-Write-Host ("Webhook: " + ($r | ConvertTo-Json -Compress))
-Write-Host 'Done. Commit the js/config.js change so it stays: git add js/config.js; git commit -m "Set Telegram bot username"; git push'
+Write-Host ('Webhook ok: ' + $r.ok + ' ' + $r.description)
+Write-Host "Done. Open the app > Profile > Morning report in Telegram > Connect."
