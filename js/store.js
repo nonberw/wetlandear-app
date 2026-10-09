@@ -26,8 +26,9 @@
   ];
   var byId = {}, byLat = {}; SPECIES.forEach(function (s) { byId[s[0]] = { id: s[0], ru: s[1], lat: s[2] }; byLat[s[2]] = s[0]; });
   /* Model suggestions: known species map to the reference list, others keep the English common name. */
-  function sugId(s) { return byLat[s.sci] || ('x:' + s.common); }
-  function sugName(s) { var id = byLat[s.sci]; return id ? byId[id].ru : s.common; }
+  function nameOf(id) { return byId[id] ? byId[id].ru : String(id).replace(/^x:/, ''); }
+  function sugId(s) { return s.id || byLat[s.sci] || ('x:' + s.common); }
+  function sugName(s) { if (s.id) return nameOf(s.id); var id = byLat[s.sci]; return id ? byId[id].ru : s.common; }
 
   var state = load();
   function blank() { return { recs: [], dets: [], station: { name: 'Телефон 1', lat: null, lon: null }, seq: 1 }; }
@@ -68,12 +69,12 @@
       state.dets.push(d);
       if (clips && clips[i]) { d.clip = true; putClip(d.id, clips[i]); }
     });
-    save();
+    save(); libReset();
     if (window.WESync) window.WESync.pushAll().then(function () { dets.forEach(function (d, i) { if (clips && clips[i]) window.WESync.uploadClip(d.id, clips[i]); }); }).catch(function () { });
   }
   function setStatus(id, status, species) {
     var d = state.dets.filter(function (x) { return x.id === id; })[0]; if (!d) return;
-    d.status = status; if (species !== undefined) d.species = species; d.reviewed = new Date().toISOString(); save();
+    d.status = status; if (species !== undefined) d.species = species; d.reviewed = new Date().toISOString(); save(); libReset();
     if (window.WESync) window.WESync.pushDet(d);
   }
 
@@ -212,8 +213,53 @@
       threats: threats, silent: silent, pulse: pulseFor(from, now + 1), prev: pulseFor(prevFrom, from), demo: cur.some(function (d) { return d.demo; }) };
   }
 
+  /* ---------- personal voice library: what you confirmed teaches the app to recognise the same voice again ---------- */
+  function f16(h) {
+    var s = (h & 0x8000) ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+    if (e === 0) return s * Math.pow(2, -14) * (m / 1024);
+    if (e === 31) return m ? NaN : s * Infinity;
+    return s * Math.pow(2, e - 15) * (1 + m / 1024);
+  }
+  /* server sends 1024 numbers as base64 float16; we keep them as small int8 text: "scale|base64" */
+  function packEmb(b64) {
+    var bin = atob(b64), n = bin.length >> 1, v = new Float32Array(n), mx = 1e-9, i;
+    for (i = 0; i < n; i++) { v[i] = f16(bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8)); if (Math.abs(v[i]) > mx) mx = Math.abs(v[i]); }
+    var sc = mx / 127, q = new Int8Array(n), str = '';
+    for (i = 0; i < n; i++) q[i] = Math.round(v[i] / sc);
+    var u = new Uint8Array(q.buffer); for (i = 0; i < u.length; i += 8192) str += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+    return sc.toPrecision(6) + '|' + btoa(str);
+  }
+  function unpackEmb(t) {
+    var p = t.split('|'), sc = parseFloat(p[0]), bin = atob(p[1]), n = bin.length, v = new Float32Array(n), nn = 0, i, x;
+    for (i = 0; i < n; i++) { x = bin.charCodeAt(i); if (x > 127) x -= 256; v[i] = x * sc; nn += v[i] * v[i]; }
+    nn = Math.sqrt(nn) || 1; for (i = 0; i < n; i++) v[i] /= nn;
+    return v;
+  }
+  var lib = null;
+  function libReset() { lib = null; }
+  function library() {
+    if (lib) return lib; lib = {};
+    state.dets.forEach(function (d) {
+      if (d.demo || d.status !== 'confirmed' || !d.species || !d.emb) return;
+      try { (lib[d.species] = lib[d.species] || []).push(unpackEmb(d.emb)); } catch (e) { }
+    });
+    return lib;
+  }
+  /* best match among your own confirmed fragments: {id, sim, n} or null */
+  function matchOwn(embStr) {
+    var L = library(), ids = Object.keys(L); if (!ids.length || !embStr) return null;
+    var q; try { q = unpackEmb(embStr); } catch (e) { return null; }
+    var best = null;
+    ids.forEach(function (id) {
+      var mx = -1; L[id].forEach(function (v) { var s = 0; for (var i = 0; i < q.length; i++) s += q[i] * v[i]; if (s > mx) mx = s; });
+      if (!best || mx > best.sim) best = { id: id, sim: mx, n: L[id].length };
+    });
+    return best;
+  }
+  function ownStats() { var L = library(); return Object.keys(L).map(function (id) { return { id: id, n: L[id].length }; }).sort(function (a, b) { return b.n - a.n; }); }
+
   window.WEStore = {
-    SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, level: level, soundKind: soundKind, threatOf: threatOf, stationStats: stationStats, report: report, get: function () { return state; }, save: save,
+    SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, nameOf: nameOf, packEmb: packEmb, matchOwn: matchOwn, ownStats: ownStats, libReset: libReset, level: level, soundKind: soundKind, threatOf: threatOf, stationStats: stationStats, report: report, get: function () { return state; }, save: save,
     addRecording: addRecording, setStatus: setStatus, getClip: getClip, pulse: pulse, perDay: perDay, dayKey: dayKey, seasonTable: seasonTable,
     seedDemo: seedDemo, clearDemo: clearDemo, hasDemo: hasDemo,
     exportLog: exportLog, exportDwC: exportDwC, exportJSON: exportJSON, importJSON: importJSON, wipe: wipe

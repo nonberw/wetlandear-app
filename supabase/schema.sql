@@ -109,3 +109,4 @@ drop policy if exists "own clips delete" on storage.objects;
 create policy "own clips delete" on storage.objects for delete to authenticated
   using (bucket_id = 'clips' and (storage.foldername(name))[1] = (select auth.uid())::text);
 alter table public.detections add column if not exists sound jsonb;
+alter table public.detections add column if not exists emb text;

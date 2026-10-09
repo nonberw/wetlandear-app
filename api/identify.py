@@ -45,7 +45,8 @@ def _load():
         return _state
     with open(os.path.join(ROOT, 'birdnet_v2.4_labels.txt'), encoding='utf-8') as f:
         labels = [l.strip() for l in f if l.strip()]
-    clf = Interpreter(model_path=os.path.join(ROOT, 'birdnet_v2.4_fp16.tflite'))
+    # all tensors are kept so the 1024-number sound fingerprint (second to last layer) can be read after each run
+    clf = Interpreter(model_path=os.path.join(ROOT, 'birdnet_v2.4_fp16.tflite'), experimental_preserve_all_tensors=True)
     clf.allocate_tensors()
     meta = Interpreter(model_path=os.path.join(ROOT, 'birdnet_v2.4_meta_fp16.tflite'))
     meta.allocate_tensors()
@@ -83,6 +84,13 @@ def _run(interp, x):
     return interp.get_tensor(o['index'])[0].copy()
 
 
+def fingerprint(interp):
+    """The model's own 1024-number description of the last window it listened to (as float16, base64)."""
+    o = interp.get_output_details()[0]
+    e = interp.get_tensor(o['index'] - 1)[0].astype('<f2')
+    return base64.b64encode(e.tobytes()).decode('ascii')
+
+
 def sound_type(window):
     """What kind of sound is at the center of a 3 s window (YAMNet, 0.975 s at 16 kHz)."""
     s = _load()
@@ -102,6 +110,7 @@ def identify(windows, lat, lon):
     out = []
     for w in windows:
         logits = _run(s['clf'], w.reshape(1, SAMPLES))
+        emb = fingerprint(s['clf'])
         conf = 1.0 / (1.0 + np.exp(-np.clip(logits, -15, 15)))
         conf = np.where(plausible, conf, 0.0)
         top = np.argsort(-conf)[:5]
@@ -112,7 +121,7 @@ def identify(windows, lat, lon):
                 continue
             sci, _, common = s['labels'][k].partition('_')
             items.append({'sci': sci, 'common': common, 'conf': round(float(conf[k]), 3)})
-        out.append({'species': items, 'sound': snd})
+        out.append({'species': items, 'sound': snd, 'emb': emb})
     return out
 
 

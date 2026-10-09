@@ -183,14 +183,23 @@
     ul.innerHTML = evs.map(function (e, i) {
       var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">модель ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug" data-a="sug" data-k="' + k + '" title="' + esc(s.sci) + '">' + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.sci) + '">' + (s.own ? '★ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
         '<div class="acts"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
     $$('#events select').forEach(function (s, i) { speciesOptions(s, true); var sp = evs[i].species; if (sp) { if (!S.species[sp]) { var o = document.createElement('option'); o.value = sp; o.textContent = spName(sp); s.insertBefore(o, s.lastChild); } s.value = sp; } });
   }
   /* species suggestions from BirdNET running on our server; always a suggestion, never an observation */
-  var idTimer = 0, idSeq = 0, SUGMIN = .2, AUTOMIN = .3;
+  var idTimer = 0, idSeq = 0, SUGMIN = .2, AUTOMIN = .3, OWNMIN = .72;
+  /* Compare with the voices you confirmed before (works for species the model has never heard, such as pelicans). */
+  function ownPick(ev) {
+    if (!ev.emb || ev.status !== 'auto') return;
+    var m = S.matchOwn(ev.emb); if (!m || m.sim < OWNMIN) return;
+    var top = ev.suggest && ev.suggest[0], topId = top && S.sugId(top);
+    if (topId === m.id) { top.own = true; return; }
+    if (top && top.conf >= .7 && m.id.indexOf('x:') !== 0 && m.sim < .8) return;
+    ev.suggest = [{ id: m.id, sci: null, common: S.nameOf(m.id), conf: Math.min(.99, m.sim), own: true }].concat(ev.suggest || []).slice(0, 3);
+  }
   /* Fill the species in automatically unless a person already decided, or the sound looks like wind, rain or speech. */
   function autoPick(ev) {
     var sg = ev.suggest && ev.suggest[0];
@@ -219,7 +228,7 @@
         var part = evs.slice(from, from + 10);
         return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + WESync.token() }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (e) { return b64(windowFor(e)); }) }) })
           .then(function (r) { if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; } if (!r.ok) throw new Error('http'); return r.json(); })
-          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (it, k) { part[k].suggest = it.species.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); part[k].sound = it.sound || null; autoPick(part[k]); }); renderEvents(); });
+          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (it, k) { part[k].suggest = it.species.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); part[k].sound = it.sound || null; part[k].emb = it.emb ? S.packEmb(it.emb) : null; ownPick(part[k]); autoPick(part[k]); }); renderEvents(); });
       }).catch(function (e) { failed = e && e.auth ? 'auth' : true; });
     })(from);
     chain.then(function () { if (seq !== idSeq) return; setIdState(failed === 'auth' ? 'Сессия истекла. Войдите снова, чтобы получить подсказки.' : failed ? 'Подсказки модели недоступны сейчас. Выберите вид сами.' : 'Подсказки модели BirdNET готовы. Проверяйте их на слух и по спектрограмме.'); });
@@ -276,7 +285,7 @@
       for (var i = 0; i < out.length; i++) { var x = Math.max(-1, Math.min(1, sess.samples[a + i])); out[i] = x < 0 ? x * 32768 : x * 32767; }
       return out;
     });
-    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, suggest: e.suggest && e.suggest[0] ? { sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
+    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
     S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
     toast('Сохранено: ' + evs.length + ' ' + plural(evs.length, 'событие', 'события', 'событий'));
@@ -405,7 +414,13 @@
   });
 
   /* ---------- data ---------- */
+  function renderVoices() {
+    var st = S.ownStats(), ul = $('#voicesList'); if (!ul) return;
+    ul.innerHTML = st.length ? st.map(function (x) { return '<li><span class="nm">' + esc(S.nameOf(x.id)) + '</span><span class="tm">' + x.n + ' ' + plural(x.n, 'образец', 'образца', 'образцов') + '</span></li>'; }).join('')
+      : '<li><span class="hint">Пока пусто. Загрузите запись, выберите вид (в том числе «Другой вид...», например пеликана), нажмите «Верно» и сохраните.</span></li>';
+  }
   function renderData() {
+    renderVoices();
     var st = S.get().station; $('#stName').value = st.name || ''; $('#stLat').value = st.lat == null ? '' : st.lat; $('#stLon').value = st.lon == null ? '' : st.lon; $('#stMsg').textContent = '';
   }
   $('#stSave').addEventListener('click', function () {

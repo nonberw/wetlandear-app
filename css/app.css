@@ -254,3 +254,6 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 
 /* play button of an event card stays a compact round button */
 .evc > .btn[data-a="play"] { align-self: start; width: 48px; min-width: 48px; height: 48px; padding: 0; border-radius: 50%; }
+
+/* suggestion learned from your own confirmed recordings */
+.sug.own { background: #EAF7EF; border-color: #8FD1AB; color: var(--ok); }
