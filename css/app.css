@@ -185,3 +185,10 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 @media (min-width: 761px) { .toast { bottom: 28px; } }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* back to the project site */
+.back { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 99px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); text-decoration: none; font-weight: 700; font-size: .88rem; transition: transform .15s var(--ease), border-color .2s, background .2s; }
+.back:active { transform: scale(.96); }
+@media (hover: hover) { .back:hover { border-color: var(--blue); background: var(--sky); } }
+.back + .ver { margin-left: 0; }
+@media (max-width: 760px) { .back { padding: 0 12px; } }
