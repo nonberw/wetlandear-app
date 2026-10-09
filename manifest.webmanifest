@@ -1,0 +1,16 @@
+{
+  "name": "WetlandEar App",
+  "short_name": "WetlandEar",
+  "description": "Пульс заповедника: запись звука, поиск событий, проверка, календарь.",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F7F9FD",
+  "theme_color": "#F7F9FD",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

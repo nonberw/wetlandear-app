@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WetlandEar App: пульс заповедника</title>
+<meta name="description" content="WetlandEar App: загрузите или запишите звук, найдите птичьи сигналы, проверьте их и получите пульс заповедника.">
+<meta name="theme-color" content="#F7F9FD">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#pulse" aria-label="WetlandEar App">
+    <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1F5BFF"/><g fill="#fff"><rect x="6" y="13" width="3" height="6" rx="1.5"/><rect x="11.5" y="9" width="3" height="14" rx="1.5"/><rect x="17" y="5" width="3" height="22" rx="1.5"/><rect x="22.5" y="11" width="3" height="10" rx="1.5"/></g></svg>
+    <span>WetlandEar</span><em>app</em>
+  </a>
+  <nav class="tabs" aria-label="Разделы">
+    <button data-view="pulse" class="on"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-7 4 14 2.5-7H21"/></svg><span>Пульс</span></button>
+    <button data-view="listen"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Слушать</span></button>
+    <button data-view="review"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Проверка</span><b id="revCount" hidden>0</b></button>
+    <button data-view="calendar"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Календарь</span></button>
+    <button data-view="data"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg><span>Данные</span></button>
+  </nav>
+  <span class="ver">v0.1 прототип</span>
+</header>
+
+<main>
+<div id="demoBanner" class="banner" hidden>Показаны ДЕМО-данные для примера. Это не реальные наблюдения. <button id="demoOff" class="link">Убрать демо</button></div>
+
+<!-- PULSE -->
+<section id="v-pulse" class="view on" aria-labelledby="h-pulse">
+  <div class="hero">
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="ring-bg" cx="110" cy="110" r="96"/>
+        <circle class="ring-fg" id="ringFg" cx="110" cy="110" r="96" stroke-dasharray="603.2" stroke-dashoffset="603.2"/>
+      </svg>
+      <div class="ring-in">
+        <div class="ring-num" id="pulseNum">&ndash;</div>
+        <div class="ring-lab" id="pulseLab">нет данных</div>
+      </div>
+    </div>
+    <div class="hero-txt">
+      <p class="eyebrow">Пульс заповедника, 7 дней</p>
+      <h1 id="h-pulse">Слышно, как живёт<br>заповедник.</h1>
+      <p class="lead" id="pulseText">Загрузите запись или включите микрофон. Через минуту здесь появится первый пульс.</p>
+      <div class="cta">
+        <button class="btn primary" data-go="listen">Записать или загрузить</button>
+        <button class="btn" id="demoOn">Показать на демо</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card stat"><span>События</span><b id="stEvents">0</b><small id="stTrend">за 7 дней</small></div>
+    <div class="card stat"><span>Виды</span><b id="stSpecies">0</b><small>подтверждены человеком</small></div>
+    <div class="card stat"><span>Проверено</span><b id="stVerified">0%</b><small>событий проверил человек</small></div>
+  </div>
+
+  <div class="card">
+    <h2>Из чего состоит пульс</h2>
+    <div class="bars" id="pulseBars"></div>
+    <details class="how"><summary>Как считается</summary>
+      <p>Индекс от 0 до 100. Разнообразие 40 баллов (до 10 подтверждённых видов за 7 дней), активность 30 баллов (до 60 событий), доверие 30 баллов (доля событий, проверенных человеком). Это простая рабочая формула первой версии. В следующих версиях она будет сравнивать сезон с нормой за прошлые годы.</p>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Последние события</h2>
+    <ul class="list" id="recent"></ul>
+  </div>
+</section>
+
+<!-- LISTEN -->
+<section id="v-listen" class="view" aria-labelledby="h-listen">
+  <h1 id="h-listen">Слушать</h1>
+  <p class="lead">Телефон становится станцией. Запишите звук рядом с водой или загрузите файл. Приложение найдёт звуковые события, а вид определите вы.</p>
+
+  <div class="drop card" id="drop">
+    <div class="drop-row">
+      <button class="btn primary" id="recBtn"><span class="dot"></span><span id="recLab">Записать</span></button>
+      <label class="btn">Загрузить файл<input type="file" id="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm" hidden></label>
+    </div>
+    <p class="hint" id="dropHint">или перетащите аудио сюда (wav, mp3, m4a, до 5 минут)</p>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div id="result" hidden>
+    <div class="card">
+      <div class="res-head">
+        <div><h2 id="resTitle">Запись</h2><p class="hint" id="resMeta"></p></div>
+        <label class="sens">Чувствительность
+          <input type="range" id="sens" min="10" max="24" value="14" step="1"><span id="sensVal"></span>
+        </label>
+      </div>
+      <div class="spec-scroll" id="specScroll">
+        <div class="spec-box" id="specBox">
+          <canvas id="spec"></canvas>
+          <div class="ev-layer" id="evLayer"></div>
+          <div class="playhead" id="playhead"></div>
+        </div>
+      </div>
+      <div class="axis"><span>10 кГц</span><span>5 кГц</span><span>1 кГц</span></div>
+      <audio id="player" controls preload="auto"></audio>
+    </div>
+
+    <div class="card">
+      <div class="res-head">
+        <h2 id="evTitle">События</h2>
+        <button class="btn primary" id="saveBtn">Сохранить в журнал</button>
+      </div>
+      <p class="hint">Приложение находит, где звучит похоже на крик птицы, но вид не определяет. Выберите вид сами и нажмите «Верно», это попадёт в журнал как подтверждённое человеком.</p>
+      <ul class="events" id="events"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEW -->
+<section id="v-review" class="view" aria-labelledby="h-review">
+  <h1 id="h-review">Проверка</h1>
+  <p class="lead">Очередь событий из ваших записей. Каждое решение превращает событие в подтверждённое наблюдение.</p>
+  <div id="revEmpty" class="card empty" hidden>
+    <b>Очередь пуста</b>
+    <p>Запишите звук или загрузите файл на экране «Слушать» и сохраните события в журнал. Они появятся здесь.</p>
+    <button class="btn primary" data-go="listen">Слушать</button>
+  </div>
+  <div id="revCard" class="card rev" hidden>
+    <div class="rev-top"><span id="revPos" class="hint"></span><span class="hint kbd">Пробел слушать · Enter верно · N ошибка · S пропустить</span></div>
+    <canvas id="revSpec" height="140"></canvas>
+    <div class="rev-meta" id="revMeta"></div>
+    <div class="rev-ctl">
+      <button class="btn" id="revPlay">Слушать</button>
+      <select id="revSel" aria-label="Вид"></select>
+    </div>
+    <div class="rev-act">
+      <button class="btn no" id="revNo">Ошибка</button>
+      <button class="btn" id="revSkip">Пропустить</button>
+      <button class="btn primary" id="revYes">Верно</button>
+    </div>
+  </div>
+</section>
+
+<!-- CALENDAR -->
+<section id="v-calendar" class="view" aria-labelledby="h-cal">
+  <h1 id="h-cal">Звуковой календарь</h1>
+  <p class="lead">День за днём. Чем темнее клетка, тем больше событий. Со временем здесь будет виден сдвиг сезонов по годам.</p>
+  <div class="card">
+    <div class="heat-scroll"><div class="heat" id="heat" role="img" aria-label="Календарь активности"></div></div>
+    <div class="legend"><span>меньше</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>больше</span></div>
+    <p class="hint" id="dayInfo">Нажмите на день, чтобы увидеть подробности.</p>
+  </div>
+  <div class="card">
+    <h2>Первые обнаружения сезона</h2>
+    <div class="tbl-wrap"><table class="tbl" id="season"><thead><tr><th>Вид</th><th>Впервые</th><th>Последний раз</th><th>Событий</th></tr></thead><tbody></tbody></table></div>
+    <p class="hint">Только подтверждённые человеком наблюдения за текущий год.</p>
+  </div>
+</section>
+
+<!-- DATA -->
+<section id="v-data" class="view" aria-labelledby="h-data">
+  <h1 id="h-data">Данные и станция</h1>
+  <div class="card">
+    <h2>Станция</h2>
+    <div class="form">
+      <label>Название<input id="stName" type="text" maxlength="40" autocomplete="off"></label>
+      <label>Широта<input id="stLat" type="text" inputmode="decimal" placeholder="50.60"></label>
+      <label>Долгота<input id="stLon" type="text" inputmode="decimal" placeholder="69.00"></label>
+    </div>
+    <div class="row"><button class="btn" id="geoBtn">Определить место</button><button class="btn primary" id="stSave">Сохранить</button><span class="hint" id="stMsg"></span></div>
+  </div>
+  <div class="card">
+    <h2>Выгрузка</h2>
+    <p class="hint">Все данные хранятся на этом устройстве. Ничего не отправляется на сервер.</p>
+    <div class="row wrap">
+      <button class="btn" id="exCsv">Журнал, CSV</button>
+      <button class="btn" id="exDwc">Darwin Core, CSV</button>
+      <button class="btn" id="exJson">Резервная копия</button>
+      <label class="btn">Восстановить<input type="file" id="imJson" accept="application/json,.json" hidden></label>
+    </div>
+    <p class="hint">Darwin Core включает только подтверждённые человеком записи с видом и никогда не включает демо.</p>
+  </div>
+  <div class="card">
+    <h2>Как это работает</h2>
+    <ol class="steps">
+      <li><b>Звук</b> приводится к единому формату и превращается в спектрограмму.</li>
+      <li><b>События</b> ищутся там, где сигнал заметно громче фона в диапазоне 0,8 до 10 кГц. Это поиск звука, а не определение вида.</li>
+      <li><b>Человек</b> выбирает вид и подтверждает. Так появляется «Подтверждено человеком».</li>
+      <li><b>Пульс</b> и календарь строятся из журнала.</li>
+    </ol>
+    <p class="status-row"><span class="chip ok">Работает</span> поиск событий, журнал, пульс, календарь, выгрузка</p>
+    <p class="status-row"><span class="chip wip">В разработке</span> автоматическое определение вида, карта станций</p>
+    <p class="status-row"><span class="chip plan">Запланировано</span> подключение станций ESP32-S3, утренний отчёт, дообучение на местных голосах</p>
+  </div>
+  <div class="card danger">
+    <h2>Очистка</h2>
+    <div class="row wrap"><button class="btn no" id="wipe">Удалить все данные на устройстве</button></div>
+  </div>
+</section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="js/dsp.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
