@@ -26,3 +26,12 @@
 
 ## Дальше
 Обучение собственного классификатора (нужен ключ Xeno-canto и 10-20 записей на вид, скрипты в папке models проекта), вопросы к журналу на естественном языке (нужен ключ LLM), определение без интернета, станции ESP32-S3 (BirdNET-Tiny Forge).
+
+## Control from Telegram and from AI assistants (MCP)
+Both act for one signed-in person on their own data. Shared logic: `lib/actions.py` (every query is filtered by the user id).
+
+- **Telegram bot** (`api/telegram.py`, `lib/bot.py`): connect in the app (Profile > Telegram), then `/today`, `/week`, `/review` (confirm or reject events with buttons), `/recent`, `/species`, `/pulse`, `/alerts`, `/stations`, `/addstation`, `/confirm`, `/reject`, `/lang`, `/stop`, `/resume`, `/unlink`. Plain text is a question to the journal. Private chats only.
+- **MCP server** (`api/mcp.py`, served at `https://app.wetlandear.tech/mcp`, Streamable HTTP): create a personal key in the app (Profile > AI assistants), then
+  `claude mcp add --transport http wetlandear https://app.wetlandear.tech/mcp --header "Authorization: Bearer we_..."`.
+  Tools: get_overview, list_events, list_species, get_alerts, morning_report, journal_summary, next_to_review, review_event, list_stations, add_station, update_station, remove_station. Only the SHA-256 of a key is stored.
+- One-time database update: run `supabase/003_bot_and_mcp.sql` in the Supabase SQL editor (key table, narrow grants for the server role).

@@ -539,8 +539,26 @@
     dets.forEach(function (d) { if (d.status === 'confirmed' && d.species) spp[d.species] = 1; });
     $('#pfEvents').textContent = dets.length; $('#pfConf').textContent = dets.filter(function (d) { return d.status === 'confirmed'; }).length; $('#pfSpp').textContent = Object.keys(spp).length;
     var st = WESync.status(); $('#pfSync').textContent = st.busy ? 'Синхронизирую...' : st.last ? T('Последняя синхронизация: {t}', { t: fmtDT(st.last.toISOString()) }) : 'Журнал хранится у вас на устройстве и копируется в облако.';
-    renderTg();
+    renderTg(); renderMcp();
     WESync.getProfile().then(function (p) { $('#pfName').value = p.display_name || me.name || ''; $('#pfOrg').value = p.organization || ''; $('#pfRole').value = p.role || ''; }).catch(function () { $('#pfName').value = me.name || ''; });
+  }
+  /* Personal keys for AI assistants (MCP) */
+  function renderMcp() {
+    var box = $('#mcpBody'); if (!box || !window.WESync || !WESync.me()) return;
+    WESync.keyList().then(function (rows) {
+      var list = rows.length ? '<ul class="keys">' + rows.map(function (k) {
+        return '<li><span>' + esc(k.label || T('Ключ')) + ' · ' + esc(fmtDT(k.created_at)) + (k.last_used ? ' · ' + esc(T('использован') + ' ' + fmtDT(k.last_used)) : '') + '</span> <button class="btn no" data-h="' + esc(k.token_hash) + '">' + esc(T('Отозвать')) + '</button></li>'; }).join('') + '</ul>' : '';
+      box.innerHTML = list + '<div class="row wrap"><input id="mcpLabel" maxlength="40" placeholder="' + esc(T('Название ключа, например Claude Desktop')) + '"><button class="btn primary" id="mcpNew">' + esc(T('Создать ключ')) + '</button></div><div id="mcpShow"></div>';
+      Array.prototype.forEach.call(box.querySelectorAll('button[data-h]'), function (b) { b.addEventListener('click', function () { if (confirm(T('Отозвать этот ключ? Ассистент, который его использует, потеряет доступ.'))) WESync.keyRemove(b.dataset.h).then(renderMcp).catch(function () { toast(T('Не удалось сохранить')); }); }); });
+      $('#mcpNew').addEventListener('click', function () {
+        WESync.keyCreate($('#mcpLabel').value.trim()).then(function (key) {
+          var cmd = 'claude mcp add --transport http wetlandear https://app.wetlandear.tech/mcp --header "Authorization: Bearer ' + key + '"';
+          $('#mcpShow').innerHTML = '<p class="hint"><b>' + esc(T('Скопируйте ключ сейчас: потом он не будет показан.')) + '</b></p><pre class="code" id="mcpKey">' + esc(key) + '</pre><p class="hint">Claude Code:</p><pre class="code" id="mcpCmd">' + esc(cmd) + '</pre>' +
+            '<p class="hint">' + esc(T('Claude Desktop и другие клиенты: адрес https://app.wetlandear.tech/mcp, заголовок Authorization со значением Bearer и ключом.')) + '</p><div class="row wrap"><button class="btn" id="mcpCopy">' + esc(T('Скопировать ключ')) + '</button></div>';
+          $('#mcpCopy').addEventListener('click', function () { try { navigator.clipboard.writeText(key).then(function () { toast(T('Скопировано')); }); } catch (e) { toast(T('Выделите и скопируйте вручную')); } });
+        }).catch(function () { toast(T('Не удалось создать ключ. Возможно, администратор ещё не применил обновление базы.')); });
+      });
+    }).catch(function () { box.innerHTML = '<p class="hint">' + esc(T('Ключи пока недоступны: администратору нужно применить обновление базы данных.')) + '</p>'; });
   }
   /* Telegram morning report */
   function renderTg() {

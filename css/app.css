@@ -303,3 +303,6 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 
 /* suggestion from WetlandEar's own classifier */
 .sug.head { background: #E6F6F4; border-color: #4FB3AA; color: #0F766E; }
+
+.keys{list-style:none;margin:0 0 12px;padding:0}.keys li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line,#dbe6f5);font-size:14px}
+pre.code{background:#f1f6fd;border:1px solid #dbe6f5;border-radius:10px;padding:10px 12px;font-size:12.5px;white-space:pre-wrap;word-break:break-all;margin:6px 0}

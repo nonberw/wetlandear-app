@@ -90,10 +90,27 @@ def esc(s):
     return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
+_RU = None
+
+
+def ru_names():
+    """English common name -> Russian, from the same file the app uses (js/species-ru.js)."""
+    global _RU
+    if _RU is None:
+        try:
+            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'js', 'species-ru.js')
+            js = open(p, encoding='utf-8').read()
+            _RU = json.loads(js[js.index('{'):js.rindex('}') + 1])
+        except Exception:
+            _RU = {}
+    return _RU
+
+
 def name_of(sid, lang):
     if sid in SPECIES:
         return SPECIES[sid][0 if lang == 'ru' else 1]
-    return str(sid)[2:] if str(sid).startswith('x:') else str(sid)
+    en = str(sid)[2:] if str(sid).startswith('x:') else str(sid)
+    return ru_names().get(en, en) if lang == 'ru' else en
 
 
 def threat_of(sound):

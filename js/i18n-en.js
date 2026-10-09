@@ -359,5 +359,20 @@
  "SNR_дБ": "SNR_dB",
  "статус": "status",
  "вид": "species",
- "латинское_название": "latin_name"
+ "латинское_название": "latin_name",
+ "ИИ-ассистенты (MCP)": "AI assistants (MCP)",
+ "Личный ключ позволяет Claude и другим ИИ-ассистентам читать ваш журнал и проверять события от вашего имени. Ключ показывается один раз, его можно отозвать.": "A personal key lets Claude and other AI assistants read your journal and review events on your behalf. The key is shown once and can be revoked.",
+ "Ключ": "Key",
+ "использован": "used",
+ "Отозвать": "Revoke",
+ "Название ключа, например Claude Desktop": "Key name, for example Claude Desktop",
+ "Создать ключ": "Create key",
+ "Отозвать этот ключ? Ассистент, который его использует, потеряет доступ.": "Revoke this key? The assistant that uses it will lose access.",
+ "Скопируйте ключ сейчас: потом он не будет показан.": "Copy the key now: it will not be shown again.",
+ "Claude Desktop и другие клиенты: адрес https://app.wetlandear.tech/mcp, заголовок Authorization со значением Bearer и ключом.": "Claude Desktop and other clients: address https://app.wetlandear.tech/mcp, header Authorization with the value Bearer and the key.",
+ "Скопировать ключ": "Copy key",
+ "Скопировано": "Copied",
+ "Выделите и скопируйте вручную": "Select and copy it by hand",
+ "Не удалось создать ключ. Возможно, администратор ещё не применил обновление базы.": "Could not create the key. The administrator may not have applied the database update yet.",
+ "Ключи пока недоступны: администратору нужно применить обновление базы данных.": "Keys are not available yet: the administrator needs to apply the database update."
 }); })();

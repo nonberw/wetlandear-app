@@ -65,23 +65,34 @@
     "api/morning.py": {
       "maxDuration": 60,
       "memory": 512,
-      "includeFiles": "lib/**"
+      "includeFiles": "{lib/**,js/species-ru.js}"
     },
     "api/telegram.py": {
       "maxDuration": 30,
       "memory": 512,
-      "includeFiles": "lib/**"
+      "includeFiles": "{lib/**,js/species-ru.js}"
     },
     "api/ask.py": {
       "maxDuration": 60,
       "memory": 512,
-      "includeFiles": "lib/**"
+      "includeFiles": "{lib/**,js/species-ru.js}"
+    },
+    "api/mcp.py": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "{lib/**,js/species-ru.js}"
     }
   },
   "crons": [
     {
       "path": "/api/morning",
       "schedule": "0 2 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
     }
   ]
 }

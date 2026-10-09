@@ -115,7 +115,18 @@
     return fetch('/api/morning', { method: 'POST', headers: { Authorization: 'Bearer ' + token() } }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); });
   }
 
+  /* ---------- personal keys for AI assistants (MCP): only the hash is stored ---------- */
+  function b64url(bytes) { return btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function sha256hex(str) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
+  function keyList() { return sb.from('api_tokens').select('token_hash,label,created_at,last_used').order('created_at', { ascending: false }).then(function (r) { if (r.error) throw r.error; return r.data; }); }
+  function keyCreate(label) {
+    var a = new Uint8Array(32); crypto.getRandomValues(a); var key = 'we_' + b64url(a);
+    return sha256hex(key).then(function (h) { return sb.from('api_tokens').insert({ token_hash: h, label: (label || '').slice(0, 40) }); }).then(function (r) { if (r.error) throw r.error; return key; });
+  }
+  function keyRemove(hash) { return sb.from('api_tokens').delete().eq('token_hash', hash).then(function (r) { if (r.error) throw r.error; }); }
+
   window.WESync = {
+    keyList: keyList, keyCreate: keyCreate, keyRemove: keyRemove,
     tgGet: tgGet, tgConnect: tgConnect, tgSet: tgSet, tgRemove: tgRemove, tgTest: tgTest, init: init, ready: ready, onChange: onChange, signIn: signIn, signOut: signOut, me: me, token: token, getProfile: getProfile, saveProfile: saveProfile,
     syncNow: syncNow, pushDet: pushDet, pushAll: pushAll, uploadClip: uploadClip, downloadClip: downloadClip, status: status };
 })();
