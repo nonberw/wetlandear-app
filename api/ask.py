@@ -4,6 +4,7 @@ Needs the ANTHROPIC_API_KEY environment variable in Vercel (set by the owner).""
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -57,13 +58,13 @@ SYSTEM = ("You are the assistant inside WetlandEar, an acoustic bird monitoring 
 
 
 def ask_claude(question, data, lang):
-    key = os.environ.get('ANTHROPIC_API_KEY', '').strip()   # a pasted key often carries a hidden newline or space
+    key = re.sub(r'[^A-Za-z0-9_\-]', '', os.environ.get('ANTHROPIC_API_KEY', ''))   # a pasted key can carry hidden characters
     if not key:
         return None, 'not configured'
     body = {'model': MODEL, 'max_tokens': 600, 'system': SYSTEM,
             'messages': [{'role': 'user', 'content': 'Language: %s\n\nJournal summary:\n%s\n\nQuestion: %s' % (lang, json.dumps(data, ensure_ascii=False), question)}]}
     headers = {'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'}
-    ws = os.environ.get('ANTHROPIC_WORKSPACE_ID', '').strip()
+    ws = re.sub(r'[^A-Za-z0-9_\-]', '', os.environ.get('ANTHROPIC_WORKSPACE_ID', ''))
     if ws:   # keys that are not scoped to one workspace need its id (an identifier, not a secret)
         headers['anthropic-workspace-id'] = ws
     req = urllib.request.Request('https://api.anthropic.com/v1/messages', method='POST', data=json.dumps(body).encode(),
