@@ -62,8 +62,12 @@ def ask_claude(question, data, lang):
         return None, 'not configured'
     body = {'model': MODEL, 'max_tokens': 600, 'system': SYSTEM,
             'messages': [{'role': 'user', 'content': 'Language: %s\n\nJournal summary:\n%s\n\nQuestion: %s' % (lang, json.dumps(data, ensure_ascii=False), question)}]}
+    headers = {'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'}
+    ws = os.environ.get('ANTHROPIC_WORKSPACE_ID', '').strip()
+    if ws:   # keys that are not scoped to one workspace need its id (an identifier, not a secret)
+        headers['anthropic-workspace-id'] = ws
     req = urllib.request.Request('https://api.anthropic.com/v1/messages', method='POST', data=json.dumps(body).encode(),
-                                 headers={'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'})
+                                 headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=40) as r:
             j = json.loads(r.read())
