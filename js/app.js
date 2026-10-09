@@ -502,6 +502,7 @@
   });
   $('#exCsv').addEventListener('click', function () { download('wetlandear-journal.csv', S.exportLog()); });
   $('#exDwc').addEventListener('click', function () { download('wetlandear-darwin-core.csv', S.exportDwC()); });
+  $('#exTrain').addEventListener('click', function () { var j = JSON.parse(S.exportTraining()); download('wetlandear-training.json', JSON.stringify(j), 'application/json'); toast(T('Выгружено образцов: {n}', { n: j.items.length })); });
   $('#exJson').addEventListener('click', function () { download('wetlandear-backup.json', S.exportJSON(), 'application/json'); });
   $('#imJson').addEventListener('change', function () {
     var f = this.files[0], inp = this; if (!f) return;

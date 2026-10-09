@@ -166,6 +166,17 @@
     });
     return toCSV(rows);
   }
+  /* confirmed observations as training data: only the sound fingerprint (no audio), the confirmed species and what the model had suggested */
+  function exportTraining() {
+    var items = [];
+    state.dets.forEach(function (d) {
+      if (d.demo || d.status !== 'confirmed' || !d.species || !d.emb) return;
+      var s = byId[d.species];
+      items.push({ species: d.species, latin: s ? s.lat : null, name: nameOf(d.species), emb: d.emb, ts: d.ts, station: d.station || null,
+        suggest: d.suggest ? { sci: d.suggest.sci || null, common: d.suggest.common || null, conf: d.suggest.conf, head: !!d.suggest.head, own: !!d.suggest.own } : null });
+    });
+    return JSON.stringify({ format: 'wetlandear-training-v1', exported: new Date().toISOString(), items: items });
+  }
   function exportJSON() { return JSON.stringify(state); }
   function importJSON(txt) { var s = JSON.parse(txt); if (!s || !Array.isArray(s.dets) || !Array.isArray(s.recs)) throw new Error('bad'); state = s; save(); }
   function wipe() { state.dets.forEach(function (d) { if (d.clip) delClip(d.id); }); state = blank(); save(); }
@@ -268,6 +279,6 @@
     SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, nameOf: nameOf, packEmb: packEmb, matchOwn: matchOwn, ownStats: ownStats, libReset: libReset, level: level, soundKind: soundKind, threatOf: threatOf, stationStats: stationStats, report: report, get: function () { return state; }, save: save,
     addRecording: addRecording, setStatus: setStatus, getClip: getClip, pulse: pulse, perDay: perDay, dayKey: dayKey, seasonTable: seasonTable,
     seedDemo: seedDemo, clearDemo: clearDemo, hasDemo: hasDemo,
-    exportLog: exportLog, exportRows: exportRows, exportDwC: exportDwC, exportJSON: exportJSON, importJSON: importJSON, wipe: wipe
+    exportLog: exportLog, exportRows: exportRows, exportDwC: exportDwC, exportJSON: exportJSON, exportTraining: exportTraining, importJSON: importJSON, wipe: wipe
   };
 })();
