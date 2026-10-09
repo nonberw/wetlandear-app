@@ -69,7 +69,11 @@ def ask_claude(question, data, lang):
             j = json.loads(r.read())
         return ''.join(b.get('text', '') for b in j.get('content', []) if b.get('type') == 'text').strip(), None
     except urllib.error.HTTPError as e:
-        return None, 'upstream %d' % e.code
+        try:
+            msg = json.loads(e.read()).get('error', {}).get('message', '')[:160]
+        except Exception:
+            msg = ''
+        return None, 'upstream %d %s' % (e.code, msg)
     except Exception:
         return None, 'upstream error'
 
