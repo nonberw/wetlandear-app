@@ -92,24 +92,34 @@ def fingerprint(interp):
 
 
 def _head():
-    """WetlandEar's own classifier trained on Xeno-canto recordings of Korgalzhyn species (models/head.npz), if present."""
+    """WetlandEar's own classifier (models/head.npz): logistic regression on BirdNET fingerprints, fused with BirdNET's own scores, calibrated."""
     if 'head' not in _state:
         path = os.path.join(ROOT, 'head.npz')
         if os.path.exists(path):
             z = np.load(path, allow_pickle=False)
-            _state['head'] = {'coef': z['coef'].astype('float32'), 'b': z['intercept'].astype('float32'), 'classes': [str(c) for c in z['classes']], 'common': [str(c) for c in z['common']]}
+            labels = _load()['labels']
+            sci_idx = {l.split('_')[0]: i for i, l in enumerate(labels)}
+            bn_labels = [str(c) for c in z['bn_labels']]
+            _state['head'] = {'coef': z['coef'].astype('float32'), 'b': z['intercept'].astype('float32'), 'classes': [str(c) for c in z['classes']],
+                              'common': [str(c) for c in z['common']], 'T': float(z['T']), 'w': float(z['w']),
+                              'bn_idx': np.array([sci_idx.get(l, -1) if l else -1 for l in bn_labels])}
         else:
             _state['head'] = None
     return _state['head']
 
 
-def head_top(vec):
+def head_top(vec, logits):
     h = _head()
     if h is None:
         return []
     v = vec / (np.linalg.norm(vec) + 1e-9)
     z = h['coef'] @ v + h['b']
-    p = np.exp(z - z.max()); p /= p.sum()
+    logp = z - (z.max() + np.log(np.exp(z - z.max()).sum()))
+    bn = np.zeros(len(logp), dtype='float32')
+    ok = h['bn_idx'] >= 0
+    bn[ok] = np.clip(logits[h['bn_idx'][ok]], -15, 15)       # BirdNET's own opinion on the same species
+    f = (logp + h['w'] * bn) / h['T']
+    p = np.exp(f - f.max()); p /= p.sum()
     out = []
     for k in np.argsort(-p)[:4]:
         if h['classes'][k] == 'background' or p[k] < .15:
@@ -138,7 +148,7 @@ def identify(windows, lat, lon):
     for w in windows:
         logits = _run(s['clf'], w.reshape(1, SAMPLES))
         emb, vec = fingerprint(s['clf'])
-        head = head_top(vec)
+        head = head_top(vec, logits)
         conf = 1.0 / (1.0 + np.exp(-np.clip(logits, -15, 15)))
         conf = np.where(plausible, conf, 0.0)
         top = np.argsort(-conf)[:5]

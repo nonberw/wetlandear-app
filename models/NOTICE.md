@@ -11,7 +11,8 @@ BirdNET does not contain every species of the reserve (for example Pelecanus cri
 
 
 ## WetlandEar species classifier (`head.npz`)
-A small classifier trained by WetlandEar on BirdNET sound fingerprints of Xeno-canto recordings (list: `head_training_sources.csv`, one Xeno-canto id per recording).
+A small classifier trained by WetlandEar on BirdNET sound fingerprints of about 1,700 Xeno-canto recordings of 125 species of Kazakhstan wetlands and steppe (list: `head_training_sources.csv`, one Xeno-canto id per recording), fused with BirdNET's own scores and calibrated.
 Recordings are used under their Creative Commons licenses (recordings licensed No-Derivatives were excluded); credit goes to the recordists on xeno-canto.org. Use is non-commercial research and education.
-Measured on recordings it had not seen (cross-validation by recording, 24 species): 78 to 81% of fragments correct, against 69% for BirdNET alone. Confidence is calibrated: at 0.35 and above about 98% correct for known species.
-Species with a single training recording (for example Pelecanus crispus) are included but cannot be validated yet.
+Measured on recordings it had not seen (cross-validation by recording, 123 species with at least 4 recordings): 74.4% of 3-second fragments correct against 59.5% for BirdNET alone on the same fragments; 82.6% when the fragments of one recording are averaged.
+Confidence is calibrated: at 0.5 and above about 93% of suggestions are right (covering 68% of fragments); the app fills a species in automatically only from 0.5.
+Species with few training recordings are included but less reliable; Pelecanus crispus has no training data yet.

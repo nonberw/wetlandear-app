@@ -206,7 +206,7 @@
   /* Fill the species in automatically unless a person already decided, or the sound looks like wind, rain or speech. */
   function autoPick(ev) {
     if (!ev.suggest || ev.status !== 'auto' || ev.species) return;
-    var sg = ev.suggest.filter(function (s) { return s.conf >= (s.head ? .35 : AUTOMIN); })[0];
+    var sg = ev.suggest.filter(function (s) { return s.conf >= (s.head ? .5 : AUTOMIN); })[0];
     if (!sg) return;
     var kind = S.soundKind(ev);
     if ((kind === 'weather' || kind === 'speech') && sg.conf < .6) return;

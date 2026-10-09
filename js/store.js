@@ -28,9 +28,11 @@
   function T(s, v) { return window.WEi18n ? window.WEi18n.t(s, v) : s; }
   var byId = {}, byLat = {}; SPECIES.forEach(function (s) { byId[s[0]] = { id: s[0], ru: s[1], en: EN_NAMES[s[0]] || s[1], lat: s[2] }; byLat[s[2]] = s[0]; });
   /* Model suggestions: known species map to the reference list, others keep the English common name. */
-  function nameOf(id) { var s = byId[id]; return s ? ((window.WEi18n && window.WEi18n.lang === 'en') ? s.en : s.ru) : String(id).replace(/^x:/, ''); }
+  function isRu() { return !(window.WEi18n && window.WEi18n.lang === 'en'); }
+  function ruOf(en) { return (isRu() && window.WE_RU && window.WE_RU[en]) || en; }
+  function nameOf(id) { var s = byId[id]; return s ? (isRu() ? s.ru : s.en) : ruOf(String(id).replace(/^x:/, '')); }
   function sugId(s) { return s.id || byLat[s.sci] || ('x:' + s.common); }
-  function sugName(s) { if (s.id) return nameOf(s.id); var id = byLat[s.sci]; return id ? nameOf(id) : s.common; }
+  function sugName(s) { if (s.id) return nameOf(s.id); var id = byLat[s.sci]; return id ? nameOf(id) : ruOf(s.common); }
 
   var state = load();
   function blank() { return { recs: [], dets: [], station: { name: 'Телефон 1', lat: null, lon: null }, seq: 1 }; }
