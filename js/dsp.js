@@ -33,13 +33,14 @@
   }
 
   /* Any audio file or blob -> Float32Array mono at 22.05 kHz */
-  function decode(arrayBuffer) {
+  function decode(arrayBuffer, rate) {
+    var R = rate || SR;
     var AC = window.AudioContext || window.webkitAudioContext;
     var ctx = new AC();
     return new Promise(function (res, rej) { ctx.decodeAudioData(arrayBuffer, res, rej); }).then(function (buf) {
-      var len = Math.max(1, Math.ceil(buf.duration * SR));
+      var len = Math.max(1, Math.ceil(buf.duration * R));
       var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-      var off = new OAC(1, len, SR), src = off.createBufferSource();
+      var off = new OAC(1, len, R), src = off.createBufferSource();
       src.buffer = buf; src.connect(off.destination); src.start();
       return new Promise(function (res2, rej2) {
         var p = off.startRendering(Promise);

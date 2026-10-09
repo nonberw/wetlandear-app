@@ -24,7 +24,10 @@
     ['ala_arv', 'Полевой жаворонок', 'Alauda arvensis'],
     ['mel_yel', 'Чёрный жаворонок', 'Melanocorypha yeltoniensis']
   ];
-  var byId = {}; SPECIES.forEach(function (s) { byId[s[0]] = { id: s[0], ru: s[1], lat: s[2] }; });
+  var byId = {}, byLat = {}; SPECIES.forEach(function (s) { byId[s[0]] = { id: s[0], ru: s[1], lat: s[2] }; byLat[s[2]] = s[0]; });
+  /* Model suggestions: known species map to the reference list, others keep the English common name. */
+  function sugId(s) { return byLat[s.sci] || ('x:' + s.common); }
+  function sugName(s) { var id = byLat[s.sci]; return id ? byId[id].ru : s.common; }
 
   var state = load();
   function blank() { return { recs: [], dets: [], station: { name: 'Телефон 1', lat: null, lon: null }, seq: 1 }; }
@@ -151,7 +154,7 @@
   function wipe() { state.dets.forEach(function (d) { if (d.clip) delClip(d.id); }); state = blank(); save(); }
 
   window.WEStore = {
-    SPECIES: SPECIES, species: byId, get: function () { return state; }, save: save,
+    SPECIES: SPECIES, species: byId, sugId: sugId, sugName: sugName, get: function () { return state; }, save: save,
     addRecording: addRecording, setStatus: setStatus, getClip: getClip, pulse: pulse, perDay: perDay, dayKey: dayKey, seasonTable: seasonTable,
     seedDemo: seedDemo, clearDemo: clearDemo, hasDemo: hasDemo,
     exportLog: exportLog, exportDwC: exportDwC, exportJSON: exportJSON, importJSON: importJSON, wipe: wipe

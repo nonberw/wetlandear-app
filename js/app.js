@@ -118,14 +118,16 @@
 
   function analyze(arrayBuffer, name, startMs) {
     setStatus('Расшифровываю звук...');
+    var copy = arrayBuffer.slice(0);
     return D.decode(arrayBuffer).then(function (samples) {
       if (samples.length / D.SR > MAXSEC) { samples = samples.subarray(0, MAXSEC * D.SR); toast('Взяты первые 5 минут'); }
       if (samples.length < 4096) throw new Error('short');
       setStatus('Ищу звуковые события...');
       return new Promise(function (r) { setTimeout(r, 40); }).then(function () {
         var sp = D.spectrogram(samples);
-        sess = { name: name, start: new Date(startMs || Date.now()).toISOString(), samples: samples, sp: sp, dur: sp.dur, saved: false, sel: -1, events: [] };
+        sess = { name: name, start: new Date(startMs || Date.now()).toISOString(), samples: samples, sp: sp, dur: sp.dur, saved: false, sel: -1, events: [], s48: null };
         var v = $('#sens').value; runDetect(+v);
+        D.decode(copy, 48000).then(function (s48) { if (sess && sess.samples === samples) { sess.s48 = s48; scheduleIdentify(0); } }).catch(function () { });
         buildPlayer(); renderResult(); setStatus('');
         $('#result').hidden = false;
         setTimeout(function () { $('#result').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
@@ -137,7 +139,7 @@
   function runDetect(snr) {
     var old = sess.events, evs = D.detect(sess.sp, snr);
     sess.events = evs.map(function (e) { e.status = 'auto'; e.species = null; return e; });
-    sess.sel = -1; $('#sensVal').textContent = snr + ' дБ';
+    sess.sel = -1; $('#sensVal').textContent = snr + ' дБ'; scheduleIdentify(900);
     return old;
   }
   function buildPlayer() {
@@ -166,11 +168,37 @@
     ul.innerHTML = evs.map(function (e, i) {
       var nm = spName(e.species), st = e.status === 'confirmed' ? '<span class="badge ok">подтверждено человеком</span>' : e.status === 'rejected' ? '<span class="badge">ошибка</span>' : '';
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug" data-a="sug" data-k="' + k + '" title="' + esc(s.sci) + '">' + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + '<div class="m">' + e.t0.toFixed(1) + ' с, ' + (e.t1 - e.t0).toFixed(1) + ' с · ' + (e.fLow / 1000).toFixed(1) + ' до ' + (e.fHigh / 1000).toFixed(1) + ' кГц · +' + e.snr + ' дБ</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
         '<div class="acts"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
     $$('#events select').forEach(function (s, i) { speciesOptions(s, true); var sp = evs[i].species; if (sp) { if (!S.species[sp]) { var o = document.createElement('option'); o.value = sp; o.textContent = spName(sp); s.insertBefore(o, s.lastChild); } s.value = sp; } });
+  }
+  /* species suggestions from BirdNET running on our server; always a suggestion, never an observation */
+  var idTimer = 0, idSeq = 0, SUGMIN = .2;
+  function scheduleIdentify(delay) { clearTimeout(idTimer); idTimer = setTimeout(runIdentify, delay); }
+  function setIdState(t) { var el = $('#idState'); if (el) el.textContent = t || ''; }
+  function windowFor(e) {
+    var src = sess.s48, c = (e.t0 + e.t1) / 2, start = Math.max(0, Math.min(c - 1.5, sess.dur - 3)), a = Math.round(start * 48000), w = new Int16Array(144000);
+    for (var i = 0; i < 144000 && a + i < src.length; i++) { var x = Math.max(-1, Math.min(1, src[a + i])); w[i] = x < 0 ? x * 32768 : x * 32767; }
+    return w;
+  }
+  function b64(i16) { var u = new Uint8Array(i16.buffer), s = '', k; for (k = 0; k < u.length; k += 8192) s += String.fromCharCode.apply(null, u.subarray(k, k + 8192)); return btoa(s); }
+  function runIdentify() {
+    if (!sess || !sess.events.length) { setIdState(''); return; }
+    if (!sess.s48) { setIdState('Готовлю звук для определения...'); return; }
+    var seq = ++idSeq, evs = sess.events, st = S.get().station, chain = Promise.resolve(), failed = false;
+    setIdState('Модель определяет виды...');
+    for (var from = 0; from < evs.length; from += 10) (function (from) {
+      chain = chain.then(function () {
+        if (seq !== idSeq || failed) return;
+        var part = evs.slice(from, from + 10);
+        return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (e) { return b64(windowFor(e)); }) }) })
+          .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+          .then(function (j) { if (seq !== idSeq || !sess || sess.events !== evs) return; j.results.forEach(function (items, k) { part[k].suggest = items.filter(function (s) { return s.conf >= SUGMIN; }).slice(0, 3); }); renderEvents(); });
+      }).catch(function () { failed = true; });
+    })(from);
+    chain.then(function () { if (seq !== idSeq) return; setIdState(failed ? 'Подсказки модели недоступны сейчас. Выберите вид сами.' : 'Подсказки модели BirdNET готовы. Проверяйте их на слух и по спектрограмме.'); });
   }
   var rafPlay = 0, stopAt = null;
   function playRange(t0, t1) {
@@ -195,6 +223,11 @@
   $('#events').addEventListener('click', function (e) {
     var li = e.target.closest('.evc'); if (!li) return; var i = +li.dataset.i, ev = sess.events[i], a = e.target.dataset.a;
     if (a === 'play') { selectEvent(i, true); return; }
+    var chip = e.target.closest('[data-a="sug"]');
+    if (chip) {
+      var sg = ev.suggest[+chip.dataset.k], sid = S.sugId(sg); ev.species = sid; sess.saved = false; renderEvents();
+      var nl = $('#events [data-i="' + i + '"]'); toast('Выбрано: ' + S.sugName(sg) + '. Нажмите «Верно», если согласны'); if (nl) $('select', nl).focus({ preventScroll: true }); return;
+    }
     if (a === 'yes') {
       var sel = $('select', li), id = pickSpecies(sel);
       if (!id) { toast('Сначала выберите вид'); sel.focus(); return; }
@@ -219,7 +252,7 @@
       for (var i = 0; i < out.length; i++) { var x = Math.max(-1, Math.min(1, sess.samples[a + i])); out[i] = x < 0 ? x * 32768 : x * 32767; }
       return out;
     });
-    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25 }; });
+    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, suggest: e.suggest && e.suggest[0] ? { sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
     S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
     toast('Сохранено: ' + evs.length + ' ' + plural(evs.length, 'событие', 'события', 'событий'));
@@ -273,6 +306,11 @@
     $('#revPos').textContent = (qi + 1) + ' из ' + queue.length;
     $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + d.station + ' · ' + (d.fLow / 1000).toFixed(1) + ' до ' + (d.fHigh / 1000).toFixed(1) + ' кГц · +' + d.snr + ' дБ · ' + D.describe(d);
     var sel = $('#revSel'); speciesOptions(sel, true);
+    if (d.suggest) {
+      var gid = S.sugId(d.suggest);
+      if (!sel.querySelector('option[value="' + gid.replace(/"/g, '') + '"]')) { var go = document.createElement('option'); go.value = gid; go.textContent = S.sugName(d.suggest); sel.insertBefore(go, sel.lastChild); }
+      sel.value = gid; $('#revMeta').textContent += ' · модель предполагает: ' + S.sugName(d.suggest) + ' ' + Math.round(d.suggest.conf * 100) + '%';
+    }
     S.getClip(d.id).then(function (int16) {
       if (queue[qi] !== d || !int16) return;
       var f = new Float32Array(int16.length); for (var i = 0; i < f.length; i++) f[i] = int16[i] / 32768;

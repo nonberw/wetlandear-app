@@ -192,3 +192,11 @@ select:focus, input:focus { border-color: var(--blue); outline: none; box-shadow
 @media (hover: hover) { .back:hover { border-color: var(--blue); background: var(--sky); } }
 .back + .ver { margin-left: 0; }
 @media (max-width: 760px) { .back { padding: 0 12px; } }
+
+/* model suggestions */
+.idstate { margin: 8px 0 0; min-height: 1.3em; }
+.sugs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.sug { border: 1.5px solid var(--blue); background: var(--sky); color: var(--blue); border-radius: 99px; min-height: 36px; padding: 0 12px; font-weight: 700; font-size: .84rem; transition: transform .15s var(--ease), background .2s; }
+.sug b { font: 600 .76rem var(--mono); margin-left: 4px; }
+.sug:active { transform: scale(.96); }
+@media (hover: hover) { .sug:hover { background: #fff; } }
