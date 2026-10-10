@@ -14,7 +14,28 @@
   function sname(id) { return A.spName ? A.spName(id) : S.nameOf(id); }
   function sci(id) { return window.WEPrivacy ? WEPrivacy.sciOf(id) : ''; }
   function store(key, def) { try { var v = JSON.parse(localStorage.getItem(key)); return v == null ? def : v; } catch (e) { return def; } }
-  function put(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { } }
+  /* indicator species and station notes follow the person across devices and are visible to teammates (table shared_prefs, migration 008) */
+  var SYNCED = { 'we.indicators': 'indicators', 'we.stationmeta': 'stationmeta' };
+  function put(key, v) {
+    try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { }
+    var k = SYNCED[key]; if (!k) return;
+    try { localStorage.setItem(key + '.ts', new Date().toISOString()); } catch (e) { }
+    if (window.WESync && WESync.me()) WESync.from('shared_prefs').upsert({ owner: WESync.userId(), key: k, value: v, updated_at: new Date().toISOString() }, { onConflict: 'owner,key' }).then(function () { }, function () { });
+  }
+  function pullPrefs() {
+    if (!window.WESync || !WESync.me()) return;
+    WESync.from('shared_prefs').select('*').then(function (r) {
+      if (r.error || !r.data) return;
+      var me = WESync.userId(), changed = false;
+      Object.keys(SYNCED).forEach(function (lk) {
+        var rows = r.data.filter(function (x) { return x.key === SYNCED[lk]; }).sort(function (a, b) { return (b.owner === me) - (a.owner === me) || (a.updated_at < b.updated_at ? 1 : -1); });
+        if (!rows.length) { var cur = store(lk, null); if (cur && ((Array.isArray(cur) && cur.length) || (!Array.isArray(cur) && Object.keys(cur).length))) put(lk, cur); return; }   /* nothing in the cloud yet: upload what this device has */
+        var remote = rows[0], ts = ''; try { ts = localStorage.getItem(lk + '.ts') || ''; } catch (e) { }
+        if (!ts || remote.updated_at > ts) { try { localStorage.setItem(lk, JSON.stringify(remote.value)); localStorage.setItem(lk + '.ts', remote.updated_at); } catch (e) { } changed = true; }
+      });
+      if (changed && A.current() === 'science') render();
+    });
+  }
   function confirmed() { return S.get().dets.filter(function (d) { return d.status === 'confirmed' && d.species; }); }
   function download(name, rows) {
     var cell = function (v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
@@ -147,6 +168,7 @@
   function render() { phenology(); indicatorsCard(); stationsCard(); }
   privacySwitch();
   var prev = window.WEX && window.WEX.onShow;
-  if (window.WEX) window.WEX.onShow = function (v) { if (prev) prev(v); if (v === 'science') render(); if (v === 'data') privacySwitch(); };
-  window.WEScience = { render: render, indicators: indicators };
+  if (window.WEX) window.WEX.onShow = function (v) { if (prev) prev(v); if (v === 'science') { render(); pullPrefs(); } if (v === 'data') privacySwitch(); };
+  if (window.WESync) WESync.onChange(function () { pullPrefs(); });
+  window.WEScience = { render: render, indicators: indicators, setIndicators: function (l) { put(IKEY, l); } };
 })();

@@ -217,7 +217,29 @@
     }).catch(function (e) { box.innerHTML = head + (needSetup(e) ? SETUP() : '<p class="hint">' + esc(L('Не удалось загрузить данные.', 'Could not load the data.')) + '</p>'); });
   }
 
-  function render() { tasksCard(); expertsCard(); pubCard(); umbCard(); }
+  /* ---------- weekly brief for the director ---------- */
+  function briefCard() {
+    var box = $('#briefCard'); if (!box) return;
+    var head = '<h2>' + esc(L('Сводка директору', 'Brief for the director')) + '</h2><p class="hint">' + esc(L('Каждый понедельник: три цифры и до трёх событий, которые стоит знать. Приходит в Telegram и, если включить, на почту. Читать можно без входа в приложение.', 'Every Monday: three numbers and up to three events worth knowing. It arrives in Telegram and, if you switch it on, by e-mail. No need to open the app.')) + '</p>';
+    if (!signed()) { box.innerHTML = head + SIGNIN(); return; }
+    db('profiles').select('digest_email').eq('id', WESync.userId()).maybeSingle().then(function (r) {
+      var on = !!(r.data && r.data.digest_email), ok = !r.error;
+      box.innerHTML = head + '<label class="chk"><input type="checkbox" id="brMail"' + (on ? ' checked' : '') + (ok ? '' : ' disabled') + '> ' + esc(L('Присылать копию на e-mail аккаунта', 'Send a copy to the account e-mail')) + '</label>' +
+        '<div class="mg-row"><button class="btn primary" id="brNow">' + esc(L('Прислать сводку сейчас', 'Send the brief now')) + '</button></div><p class="hint" id="brMsg" role="status"></p>' +
+        (ok ? '' : SETUP());
+      var cb = $('#brMail', box); if (cb) cb.addEventListener('change', function () { db('profiles').update({ digest_email: cb.checked }).eq('id', WESync.userId()).then(function (x) { if (x.error) { cb.checked = !cb.checked; A.toast(L('Не удалось сохранить', 'Could not save')); } }); });
+      $('#brNow', box).addEventListener('click', function () {
+        var m = $('#brMsg', box), b = this; b.disabled = true; m.textContent = '';
+        fetch('/api/morning', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + WESync.token() }, body: JSON.stringify({ kind: 'brief' }) }).then(function (x) { return x.json().then(function (j) { return { s: x.status, j: j }; }); }).then(function (x) {
+          if (x.s === 409) m.textContent = L('Сначала подключите Telegram: Профиль → Утренний отчёт в Telegram.', 'Connect Telegram first: Profile → Morning report in Telegram.');
+          else if (x.s !== 200) m.textContent = L('Не удалось отправить.', 'Could not send.');
+          else m.textContent = (x.j.sent ? L('Сводка отправлена в Telegram. ', 'The brief was sent to Telegram. ') : L('За прошлую неделю событий нет, сводка не отправлена. ', 'No events last week, so no brief was sent. ')) + (cb && cb.checked ? (x.j.email ? L('Письмо отправлено.', 'E-mail sent.') : x.j.email_configured === false ? L('Почта ещё не настроена администратором, письма не уходят.', 'E-mail is not configured by the administrator yet, so no mail is sent.') : '') : '');
+        }).catch(function () { m.textContent = L('Не удалось отправить.', 'Could not send.'); }).then(function () { b.disabled = false; });
+      });
+    });
+  }
+
+  function render() { tasksCard(); expertsCard(); pubCard(); briefCard(); umbCard(); }
   function init() {
     var b1 = $('#revExpert'), b2 = $('#revTask');
     if (b1) b1.addEventListener('click', askExpert);

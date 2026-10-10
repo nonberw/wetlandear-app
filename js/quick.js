@@ -58,6 +58,7 @@
     { id: 'tasks', ico: 'ok', ru: 'Задачи рейнджерам', en: 'Tasks for rangers', dru: 'Создать и закрыть с фото', den: 'Create and close with a photo', view: 'manage', sel: '#taskCard', kw: 'задача рейнджер поручение task ranger' },
     { id: 'expert', ico: 'chat', ru: 'Проверка экспертом', en: 'Expert review', dru: 'Ссылка для орнитолога без регистрации', den: 'A link for an ornithologist, no registration', view: 'manage', sel: '#expCard', kw: 'эксперт орнитолог ссылка expert ornithologist link' },
     { id: 'public', ico: 'pin', ru: 'Публичная страница и QR', en: 'Public page and QR', dru: 'Слушайте болото, отчёт для спонсоров', den: 'Listen to the wetland, sponsor report', view: 'manage', sel: '#pubCard', kw: 'публичная страница qr табличка спонсор грант public page placard sponsor grant' },
+    { id: 'brief', ico: 'doc', ru: 'Сводка директору', en: 'Brief for the director', dru: 'Раз в неделю в Telegram и на почту', den: 'Weekly in Telegram and by e-mail', view: 'manage', sel: '#briefCard', kw: 'сводка директор неделя почта email brief director weekly mail' },
     { id: 'branches', ico: 'team', ru: 'Филиалы', en: 'Branches', dru: 'Сводка по нескольким заповедникам', den: 'Summary of several reserves', view: 'manage', sel: '#umbCard', kw: 'филиал ведомство парк branch umbrella parks' },
     { id: 'offline', ico: 'off', ru: 'Работа без интернета', en: 'Work offline', dru: 'Модель прямо в телефоне', den: 'The model right on the phone', view: 'offline', kw: 'офлайн без интернета offline' }
   ];

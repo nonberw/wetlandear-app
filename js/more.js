@@ -221,7 +221,7 @@
     box.addEventListener('click', function (e) { var b = e.target.closest('[data-play]'); if (b) playDet(b.getAttribute('data-play')); });
     var key = 'we.indicators', get = function () { try { return JSON.parse(localStorage.getItem(key)) || []; } catch (x) { return []; } };
     var upd = function () { $('#spInd', m).textContent = get().indexOf(id) >= 0 ? L('Убрать из индикаторных видов', 'Remove from indicator species') : L('Сделать индикаторным видом', 'Make an indicator species'); };
-    upd(); $('#spInd', m).addEventListener('click', function () { var l = get(), i = l.indexOf(id); if (i >= 0) l.splice(i, 1); else if (l.length < 20) l.push(id); else { A.toast(L('Не больше 20 видов', 'No more than 20 species')); return; } try { localStorage.setItem(key, JSON.stringify(l)); } catch (x) { } upd(); if (window.WEScience && A.current() === 'science') WEScience.render(); });
+    upd(); $('#spInd', m).addEventListener('click', function () { var l = get(), i = l.indexOf(id); if (i >= 0) l.splice(i, 1); else if (l.length < 20) l.push(id); else { A.toast(L('Не больше 20 видов', 'No more than 20 species')); return; } if (window.WEScience) WEScience.setIndicators(l); else try { localStorage.setItem(key, JSON.stringify(l)); } catch (x) { } upd(); if (window.WEScience && A.current() === 'science') WEScience.render(); });
     if (sciName) modelSize(sciName).then(function (n) {
       var el = $('#spKnow', m); if (!el) return;
       if (n == null) el.textContent = L('Модель WetlandEar этот вид специально не обучала: опирается на BirdNET.', 'The WetlandEar model was not trained on this species: it relies on BirdNET.');
