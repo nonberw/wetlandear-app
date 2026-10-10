@@ -1,5 +1,6 @@
 /* English common name -> scientific name, for the species card and data exports. Generated from models/head.npz. */
 window.WE_SCI = {
+"Aquila clanga": "Aquila clanga",
 "Asian Short-toed Lark": "Alaudala cheleensis",
 "Bank Swallow": "Riparia riparia",
 "Bar-headed Goose": "Anser indicus",
@@ -87,6 +88,7 @@ window.WE_SCI = {
 "Eurasian Griffon": "Gyps fulvus",
 "Eurasian Hobby": "Falco subbuteo",
 "Eurasian Hoopoe": "Upupa epops",
+"Eurasian Jackdaw": "Corvus monedula",
 "Eurasian Jay": "Garrulus glandarius",
 "Eurasian Kestrel": "Falco tinnunculus",
 "Eurasian Linnet": "Linaria cannabina",

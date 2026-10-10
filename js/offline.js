@@ -4,7 +4,7 @@
    so the app does not care where they come from. Files are downloaded once into the browser's cache (about 47 MB). */
 (function () {
   'use strict';
-  var VERSION = 'v5-lr1', CACHE = 'we-offline-' + VERSION;
+  var VERSION = 'v6-lr1', CACHE = 'we-offline-' + VERSION;
   var RT = 'js/vendor/litert/';
   var SAMPLES = 144000, ready = false, state = null, initP = null, LR = null, queue = Promise.resolve();
 
