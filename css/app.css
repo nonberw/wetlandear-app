@@ -531,3 +531,32 @@ body.qs-lock { overflow: hidden; }
 @media (max-width: 760px) { .qs-head kbd { display: none; } }
 .qflash { animation: qflash 1.5s var(--ease); }
 @keyframes qflash { 0%, 60% { box-shadow: 0 0 0 4px rgba(31, 91, 255, .35); } 100% { box-shadow: 0 0 0 4px rgba(31, 91, 255, 0); } }
+
+/* science and records */
+.ph-note { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; padding: 12px 14px; border-radius: 14px; background: var(--sky); font-size: .92rem; }
+.ph-note > span { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.ph-note small { color: var(--soft); }
+.ph-i { cursor: pointer; }
+.tbl td.early { color: var(--ok); font-weight: 700; }
+.tbl td.late { color: var(--warn); font-weight: 700; }
+.ind-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.ind-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 6px 5px 12px; border-radius: 99px; background: var(--sky); color: var(--blue); font-weight: 600; font-size: .88rem; cursor: pointer; }
+.ind-chip button { border: 0; background: none; width: 22px; height: 22px; border-radius: 50%; color: var(--blue); font-size: 1.1rem; line-height: 1; padding: 0; }
+.ind-chip button:hover { background: #fff; }
+.ind-add { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+.ind-add input { flex: 1 1 200px; min-height: 46px; border: 1.5px solid var(--line); border-radius: 99px; padding: 0 16px; background: #fff; }
+.ind-sum { margin: 6px 0; font-size: 1.02rem; }
+.stn-list { display: grid; gap: 10px; margin-top: 8px; }
+.stn { border: 1px solid var(--line); border-left: 5px solid var(--ok); border-radius: 14px; padding: 12px 14px; background: #fff; }
+.stn.warn { border-left-color: var(--warn); }
+.stn.bad { border-left-color: var(--bad); }
+.stn-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.stn-s { font-size: .8rem; font-weight: 700; color: var(--ok); }
+.stn.warn .stn-s { color: var(--warn); }
+.stn.bad .stn-s { color: var(--bad); }
+.stn-m { color: var(--soft); font-size: .86rem; margin: 4px 0 8px; }
+.stn-f { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stn-f label { display: flex; flex-direction: column; gap: 3px; font-size: .78rem; color: var(--soft); font-weight: 600; }
+.stn-f label.wide { grid-column: 1 / -1; }
+.stn-f input { min-height: 40px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 12px; background: var(--bg); color: var(--ink); font-weight: 400; font-size: .92rem; }
+@media (max-width: 520px) { .stn-f { grid-template-columns: 1fr; } }

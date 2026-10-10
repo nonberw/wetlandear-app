@@ -146,12 +146,14 @@
   /* ---------- export ---------- */
   function csvCell(v) { v = v == null ? '' : String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
   function toCSV(rows) { return '﻿' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'); }
+  /* coordinates to publish for one record: rounded for sensitive species when protection is on (js/privacy.js) */
+  function priv(d) { return window.WEPrivacy ? window.WEPrivacy.place(d) : [d.lat, d.lon]; }
   function exportRows(list) {
     var rows = [['id', 'время', 'станция', 'широта', 'долгота', 'сек_начало', 'сек_конец', 'частота_от_Гц', 'частота_до_Гц', 'пик_Гц', 'SNR_дБ', 'статус', 'вид', 'латинское_название', 'демо']];
     rows[0] = rows[0].map(function (h) { return T(h); });
     list.forEach(function (d) {
-      var sp = d.species && byId[d.species];
-      rows.push([d.id, d.ts, d.station, d.lat, d.lon, d.t0.toFixed(2), d.t1.toFixed(2), d.fLow, d.fHigh, d.fPeak, d.snr, d.status, sp ? nameOf(d.species) : (d.species || ''), sp ? sp.lat : '', d.demo ? T('да') : '']);
+      var sp = d.species && byId[d.species], pl = priv(d);
+      rows.push([d.id, d.ts, d.station, pl[0], pl[1], d.t0.toFixed(2), d.t1.toFixed(2), d.fLow, d.fHigh, d.fPeak, d.snr, d.status, sp ? nameOf(d.species) : (d.species || ''), sp ? sp.lat : '', d.demo ? T('да') : '']);
     });
     return toCSV(rows);
   }
@@ -160,9 +162,10 @@
   function exportDwC() {
     var rows = [['occurrenceID', 'basisOfRecord', 'eventDate', 'scientificName', 'vernacularName', 'decimalLatitude', 'decimalLongitude', 'recordedBy', 'identificationVerificationStatus', 'samplingProtocol', 'locality']];
     state.dets.forEach(function (d) {
-      if (d.demo || d.status !== 'confirmed' || !d.species || !byId[d.species]) return;
-      var sp = byId[d.species];
-      rows.push([d.id, 'HumanObservation', d.ts, sp.lat, sp.ru, d.lat, d.lon, 'WetlandEar', 'verified by human from acoustic recording', 'passive acoustic monitoring', d.station]);
+      if (d.demo || d.status !== 'confirmed' || !d.species) return;
+      var sp = byId[d.species], sci = sp ? sp.lat : (window.WEPrivacy ? window.WEPrivacy.sciOf(d.species) : ''), pl = priv(d);
+      if (!sci) return;   /* a name nobody could match to a scientific name is not a valid GBIF record */
+      rows.push([d.id, 'HumanObservation', d.ts, sci, nameOf(d.species), pl[0], pl[1], 'WetlandEar', 'verified by human from acoustic recording', 'passive acoustic monitoring', d.station]);
     });
     return toCSV(rows);
   }

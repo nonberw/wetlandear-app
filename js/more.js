@@ -230,24 +230,25 @@
     var from = new Date($('#exFrom').value + 'T00:00:00'), to = new Date($('#exTo').value + 'T23:59:59'), blur = $('#exBlur').checked;
     var me = window.WESync && WESync.me(), who = (me && me.name) || '';
     var all = S.get().dets, dets = all.filter(function (d) { var t = +new Date(d.ts); return d.status === 'confirmed' && d.species && !d.demo && t >= +from && t <= +to; }).sort(function (a, b) { return a.ts < b.ts ? -1 : 1; });
-    var rnd = function (v) { return v == null ? '' : (blur ? Math.round(v * 10) / 10 : Math.round(v * 1e5) / 1e5); };
+    var sens = function (id) { return !!(window.WEPrivacy && WEPrivacy.on() && WEPrivacy.isSensitive(id)); };   /* sensitive species: coordinates rounded to 0.1 degree */
+    var rnd = function (v, hide) { return v == null ? '' : (blur || hide ? Math.round(v * 10) / 10 : Math.round(v * 1e5) / 1e5); };
     var rows, skipped = 0, ok = 0;
     if (fmt === 'ebird') {
       rows = [['Common Name', 'Genus', 'Species', 'Number', 'Species Comments', 'Location Name', 'Latitude', 'Longitude', 'Date', 'Start Time', 'State/Province', 'Country Code', 'Protocol', 'Number of Observers', 'Duration (Min)', 'All Obs Reported (Y/N)', 'Distance Traveled (Miles)', 'Area Covered (Acres)', 'Breeding Code', 'Observation Details', 'Checklist Comments']];
       var g = {};
       dets.forEach(function (d) {
         var sci = sciOf(d.species, all); if (sci.indexOf(' ') < 0) { skipped++; return; }
-        var t = new Date(d.ts), key = (d.station || 'WetlandEar station') + '|' + t.toDateString(), e = g[key] = g[key] || { st: d.station || 'WetlandEar station', d: t, lat: d.lat, lon: d.lon, sp: {} };
+        var t = new Date(d.ts), key = (d.station || 'WetlandEar station') + '|' + t.toDateString(), e = g[key] = g[key] || { st: d.station || 'WetlandEar station', d: t, lat: d.lat, lon: d.lon, sp: {}, sens: false }; if (sens(d.species)) e.sens = true;
         var s = e.sp[d.species] = e.sp[d.species] || { sci: sci, n: 0, time: p2(t.getHours()) + ':' + p2(t.getMinutes()) }; s.n++;
       });
       Object.keys(g).forEach(function (k) { var e = g[k]; Object.keys(e.sp).forEach(function (id) { var s = e.sp[id], parts = s.sci.split(' '); ok++;
-        rows.push([S.species[id] ? S.species[id].en : String(id).replace(/^x:/, ''), parts[0], parts[1], 'X', 'Detected by passive acoustic monitoring, confirmed by a person (' + s.n + ' events)', e.st, rnd(e.lat), rnd(e.lon), p2(e.d.getMonth() + 1) + '/' + p2(e.d.getDate()) + '/' + e.d.getFullYear(), s.time, '', 'KZ', 'Incidental', 1, '', 'N', '', '', '', '', 'WetlandEar']); }); });
+        rows.push([S.species[id] ? S.species[id].en : String(id).replace(/^x:/, ''), parts[0], parts[1], 'X', 'Detected by passive acoustic monitoring, confirmed by a person (' + s.n + ' events)', e.st, rnd(e.lat, e.sens), rnd(e.lon, e.sens), p2(e.d.getMonth() + 1) + '/' + p2(e.d.getDate()) + '/' + e.d.getFullYear(), s.time, '', 'KZ', 'Incidental', 1, '', 'N', '', '', '', '', 'WetlandEar']); }); });
     } else {
       rows = [['occurrenceID', 'basisOfRecord', 'eventDate', 'scientificName', 'vernacularName', 'taxonRank', 'decimalLatitude', 'decimalLongitude', 'geodeticDatum', 'countryCode', 'recordedBy', 'identifiedBy', 'identificationVerificationStatus', 'samplingProtocol', 'occurrenceRemarks', 'locality', 'dateIdentified', 'informationWithheld']];
       dets.forEach(function (d) {
         var sci = sciOf(d.species, all); if (sci.indexOf(' ') < 0) { skipped++; return; }
         var sg = d.suggest, remark = sg ? 'Species suggested by the model (' + (sg.common || sg.sci || '') + ' ' + Math.round((sg.conf || 0) * 100) + '%) and confirmed by a person.' : 'Species identified by a person from a recorded sound.';
-        ok++; rows.push(['wetlandear:' + d.id, 'HumanObservation', d.ts, sci, S.species[d.species] ? S.species[d.species].en : String(d.species).replace(/^x:/, ''), 'species', rnd(d.lat), rnd(d.lon), 'WGS84', 'KZ', who, who, 'verified by a person', 'passive acoustic monitoring, automated detection (BirdNET, WetlandEar model) with human verification', remark, d.station || '', d.reviewed || '', blur ? 'coordinates rounded to 0.1 degree' : '']);
+        ok++; rows.push(['wetlandear:' + d.id, 'HumanObservation', d.ts, sci, S.species[d.species] ? S.species[d.species].en : String(d.species).replace(/^x:/, ''), 'species', rnd(d.lat, sens(d.species)), rnd(d.lon, sens(d.species)), 'WGS84', 'KZ', who, who, 'verified by a person', 'passive acoustic monitoring, automated detection (BirdNET, WetlandEar model) with human verification', remark, d.station || '', d.reviewed || '', blur ? 'coordinates rounded to 0.1 degree' : '']);
       });
     }
     if (!ok) { A.toast(L('Нет подтверждённых видов за период', 'No confirmed species in this period')); return; }
@@ -296,7 +297,7 @@
       bar.innerHTML = ['log', 'calendar', 'map'].map(function (t) { return '<button role="tab" data-go2="' + t + '" data-sub="' + t + '">' + esc(subLabel(t)) + '</button>'; }).join('');
       sec.insertBefore(bar, sec.firstChild);
     });
-    ['data', 'report', 'profile', 'voices', 'offline'].forEach(function (v) {
+    ['data', 'report', 'profile', 'voices', 'offline', 'science'].forEach(function (v) {
       var sec = document.getElementById('v-' + v); if (!sec || sec.querySelector('.back-more')) return;
       var b = document.createElement('button'); b.className = 'link back-more no-print'; b.setAttribute('data-go2', 'more'); b.textContent = '← ' + L('Ещё', 'More');
       sec.insertBefore(b, sec.firstChild);

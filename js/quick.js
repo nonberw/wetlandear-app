@@ -25,6 +25,7 @@
     db: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6',
     chat: 'M4 5h16v11H9l-5 4z',
     home: 'M4 11.5L12 5l8 6.5V19a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1z',
+    chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
     user: 'M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 20c0-4 3.6-6 8-6s8 2 8 6'
   };
   /* top: shown as big tiles when the box is empty. sel: element to scroll to; focus: element to focus */
@@ -49,6 +50,10 @@
     { id: 'team', ico: 'team', ru: 'Команда заповедника', en: 'Reserve team', dru: 'Сотрудники, роли, общий журнал', den: 'Staff, roles, shared log', view: 'profile', sel: '#teamCard', kw: 'команда сотрудники роли team staff roles' },
     { id: 'mcp', ico: 'plug', ru: 'Подключить ИИ-ассистента', en: 'Connect an AI assistant', dru: 'Claude и другие читают журнал', den: 'Claude and others can read the log', view: 'profile', sel: '#mcpCard', kw: 'mcp claude ключ ассистент api key' },
     { id: 'profile', ico: 'user', ru: 'Профиль и Telegram', en: 'Profile and Telegram', dru: 'Аккаунт, бот, тревоги', den: 'Account, bot, alerts', view: 'profile', kw: 'профиль телеграм аккаунт вход profile telegram account login' },
+    { id: 'science', ico: 'chart', ru: 'Наука и учёт', en: 'Science and records', dru: 'Фенология, индикаторные виды, станции', den: 'Phenology, indicator species, stations', view: 'science', kw: 'фенология прилет индикаторные виды станции рекордеры phenology indicator stations recorders' },
+    { id: 'pheno', ico: 'cal', ru: 'Фенология: первые прилёты', en: 'Phenology: first arrivals', dru: 'Даты по годам и CSV', den: 'Dates by year and CSV', view: 'science', sel: '#phenoCard', kw: 'прилет отлет фенология сдвиг phenology arrival' },
+    { id: 'indic', ico: 'eye', ru: 'Индикаторные виды', en: 'Indicator species', dru: 'Один график здоровья болота', den: 'One chart of wetland health', view: 'science', sel: '#indCard', kw: 'индикатор здоровье индикаторные indicator health' },
+    { id: 'stations', ico: 'pin', ru: 'Станции и рекордеры', en: 'Stations and recorders', dru: 'Кто жив, кто молчит, кто отвечает', den: 'Who is alive, who is silent, who is in charge', view: 'science', sel: '#stnCard', kw: 'рекордер батарея карта памяти ответственный recorder battery memory card' },
     { id: 'offline', ico: 'off', ru: 'Работа без интернета', en: 'Work offline', dru: 'Модель прямо в телефоне', den: 'The model right on the phone', view: 'offline', kw: 'офлайн без интернета offline' }
   ];
   var root, input, listEl, gridEl, open = false, items = [], act = 0, opener = null;
