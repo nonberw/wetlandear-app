@@ -340,7 +340,7 @@
       bar.innerHTML = ['log', 'calendar', 'map'].map(function (t) { return '<button role="tab" data-go2="' + t + '" data-sub="' + t + '">' + esc(subLabel(t)) + '</button>'; }).join('');
       sec.insertBefore(bar, sec.firstChild);
     });
-    ['data', 'report', 'profile', 'voices', 'offline', 'science'].forEach(function (v) {
+    ['data', 'report', 'profile', 'voices', 'offline', 'science', 'manage'].forEach(function (v) {
       var sec = document.getElementById('v-' + v); if (!sec || sec.querySelector('.back-more')) return;
       var b = document.createElement('button'); b.className = 'link back-more no-print'; b.setAttribute('data-go2', 'more'); b.textContent = '← ' + L('Ещё', 'More');
       sec.insertBefore(b, sec.firstChild);

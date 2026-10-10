@@ -86,6 +86,16 @@
       "maxDuration": 30,
       "memory": 512,
       "includeFiles": "lib/**"
+    },
+    "api/public.py": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
+    },
+    "api/expert.py": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
     }
   },
   "crons": [

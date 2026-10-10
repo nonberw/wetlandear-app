@@ -181,7 +181,10 @@
     return p;
   }
 
+  /* generic access for the screens that talk to their own tables (tasks, expert requests, public pages, shared settings) */
+  function from(t) { return sb.from(t); }
   window.WESync = {
+    from: from, rpc: rpc, userId: function () { return user ? user.id : null; },
     shareSamples: shareSamples,
     reviewLog: reviewLog,
     orgList: orgList, orgPeople: orgPeople, orgCreate: orgCreate, orgJoin: orgJoin, orgRole: orgRole, orgRemove: orgRemove, orgCode: orgCode, orgDelete: orgDelete,
