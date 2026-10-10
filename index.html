@@ -27,7 +27,7 @@
     <button data-view="listen"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Записать</span></button>
     <button data-view="review"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Проверка</span><b id="revCount" hidden>0</b></button>
     <button data-view="log" data-group="log,calendar,map"><svg viewBox="0 0 24 24"><path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v14H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 8h6M9 12h6"/></svg><span>Журнал</span></button>
-    <button data-view="more" data-group="more,data,report,profile"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg><span>Ещё</span></button>
+    <button data-view="more" data-group="more,data,report,profile,voices"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg><span>Ещё</span></button>
   </nav>
   <div class="lang" role="group" aria-label="Язык"><button data-lang="ru" aria-pressed="true">RU</button><button data-lang="en" aria-pressed="false">EN</button><button data-lang="kk" aria-pressed="false">ҚАЗ</button></div>
   <div class="auth" id="authBox"></div>
@@ -42,6 +42,7 @@
   <h1 id="h-more">Ещё</h1>
   <div class="more-list">
     <button class="more-item" data-go2="data"><b>Станция и данные</b><span>Название и координаты станции, выгрузка журнала, экспорт для GBIF и eBird</span></button>
+    <button class="more-item" data-go2="voices"><b>Голоса и датасеты</b><span>Научить приложение новому голосу, загрузить размеченный датасет, собрать датасет заповедника</span></button>
     <button class="more-item" data-go2="report"><b>Отчёты</b><span>Утренний отчёт и PDF для заповедника</span></button>
     <button class="more-item" data-go2="profile"><b>Профиль и подключения</b><span>Аккаунт, Telegram, команда, ИИ-ассистенты</span></button>
     <a class="more-item" href="https://wetlandear.tech/metrics" target="_blank" rel="noopener"><b>Точность модели</b><span>Честные цифры: насколько модель точнее BirdNET</span></a>
@@ -49,6 +50,24 @@
     <a class="more-item" href="https://wetlandear.tech/privacy" target="_blank" rel="noopener"><b>Конфиденциальность</b><span>Какие данные мы храним и зачем</span></a>
   </div>
   <p class="hint more-ver">WetlandEar App · версия 0.2 · прототип</p>
+</section>
+
+<!-- VOICES -->
+<section id="v-voices" class="view" aria-labelledby="h-voices">
+  <h1 id="h-voices">Голоса и датасеты</h1>
+  <p class="lead">Научите приложение голосам, которых нет в BirdNET, и соберите свой датасет: размеченные звуки каждой птицы вашего заповедника.</p>
+  <details class="card fold">
+    <summary><h2>Как это работает</h2></summary>
+    <p><b>1. Вы называете вид</b> и загружаете 5–10 записей, где слышен только он.</p>
+    <p><b>2. Приложение находит звуки</b> и превращает каждый в «отпечаток» (так его видит модель). Вы слушаете и оставляете только нужные.</p>
+    <p><b>3. Для вашего вида обучается маленький классификатор</b> «этот голос против всех остальных». Он работает прямо в браузере.</p>
+    <p><b>4. В новых записях</b> такой голос получает подсказку со звёздочкой ★. Чем больше и разнообразнее образцы, тем лучше. Аудио остаётся у вас.</p>
+  </details>
+  <div class="card" id="voiceLibCard"><h2>Голоса, которые приложение знает</h2><p class="hint">Всё, что вы подтвердили, и всё, чему научили. Нажмите ♪, чтобы послушать эталон.</p><div id="voiceLib"></div></div>
+  <div class="card" id="voiceWizard"><h2>Научить новому голосу</h2><div id="wizBody"></div></div>
+  <div class="card" id="dsImportCard"><h2>Загрузить размеченный датасет</h2><div id="dsImport"></div></div>
+  <div class="card" id="dsExportCard"><h2>Собрать датасет заповедника</h2><p class="hint">Все подтверждённые звуки по видам в одном архиве: клипы WAV и таблица с описанием. Его можно передать коллегам или использовать для обучения своих моделей.</p><div id="dsExport"></div></div>
+  <p class="hint">Хотите помочь обучить общую модель? Передайте проекту отпечатки подтверждённых звуков: <button class="link" data-go2="data">Данные → Помочь обучить модель</button></p>
 </section>
 
 <!-- PULSE -->
@@ -114,12 +133,7 @@
     <h2>Пакетная загрузка</h2>
     <p class="hint">Сотни файлов с карты памяти станции за раз: приложение обработает их по очереди и сохранит события в журнал. Вкладку нужно держать открытой.</p>
     <div class="row wrap"><label class="btn">Выбрать файлы<input type="file" id="batchFiles" multiple accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm" hidden></label><label class="btn">Выбрать папку<input type="file" id="batchDir" webkitdirectory multiple hidden></label></div>
-    <label class="chk"><input type="radio" name="bmode" value="auto" checked> <span>Найти события и подсказать виды</span></label>
-    <label class="chk"><input type="radio" name="bmode" value="teach"> <span>Научить голосу: на всех этих файлах поёт один вид</span></label>
-    <div id="teachBox" hidden>
-      <p class="hint">Для вида, которого нет в BirdNET, например кудрявого пеликана. Загрузите 5–10 записей, где слышен только он: найденные звуки сохранятся как ваши образцы, и приложение начнёт узнавать этот голос.</p>
-      <input id="teachSpecies" list="speciesList" autocomplete="off" placeholder="Вид, например Кудрявый пеликан">
-    </div>
+    <p class="hint">Хотите научить приложение голосу, которого нет в BirdNET, например кудрявому пеликану? <button class="link" data-go2="voices">Голоса и датасеты</button></p>
     <div class="row wrap"><button class="btn primary" id="batchGo">Начать</button><button class="btn" id="batchStop" hidden>Остановить</button><button class="btn" id="batchClear">Очистить список</button></div>
     <div class="bprog"><i id="batchBar"></i></div>
     <p class="hint" id="batchSum"></p>
@@ -174,7 +188,9 @@
     <div class="rev-meta" id="revMeta"></div>
     <div class="rev-ctl">
       <button class="btn" id="revPlay">Слушать</button>
+      <input id="revTyped" class="spt" data-combo type="text" placeholder="или введите вид">
       <select id="revSel" aria-label="Вид"></select>
+      <button class="btn" id="revRef" title="Послушать эталон">♪ Эталон</button>
     </div>
     <div class="rev-act">
       <button class="btn no" id="revNo">Ошибка</button>
@@ -405,6 +421,7 @@
 <script src="js/more.js"></script>
 <script src="js/batch.js"></script>
 <script src="js/watch.js"></script>
+<script src="js/voices.js"></script>
 <script src="js/weather.js"></script>
 <datalist id="speciesList"></datalist>
 <div id="pdfPaper" aria-hidden="true"></div>

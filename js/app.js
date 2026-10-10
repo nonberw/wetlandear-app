@@ -29,6 +29,7 @@
     sel.innerHTML = h;
   }
   function pickSpecies(sel) {
+    var ti = sel.parentNode && sel.parentNode.querySelector('input[data-combo]'); if (ti && ti.dataset.id) return ti.dataset.id;
     if (sel.value === '__other') {
       var t = (prompt(T('Название вида')) || '').trim().slice(0, 60);
       if (!t) { sel.value = ''; return null; }
@@ -187,9 +188,9 @@
     ul.innerHTML = evs.map(function (e, i) {
       var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">' + esc(T('модель')) + ' ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : s.head ? ' head' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.head ? 'модель WetlandEar, обучена на записях Xeno-canto' : s.sci) + '">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : s.head ? ' head' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.head ? 'модель WetlandEar, обучена на записях Xeno-canto' : s.sci) + '">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button><button class="refbtn" data-a="ref" data-k="' + k + '" title="' + esc(T('Послушать эталон')) + '" aria-label="' + esc(T('Послушать эталон')) + '">♪</button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
-        '<div class="acts"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
+        '<div class="acts"><input class="spt" data-combo type="text" placeholder="' + esc(T('или введите вид')) + '"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
     $$('#events select').forEach(function (s, i) { speciesOptions(s, true); var sp = evs[i].species; if (sp) { if (!S.species[sp]) { var o = document.createElement('option'); o.value = sp; o.textContent = spName(sp); s.insertBefore(o, s.lastChild); } s.value = sp; } });
   }
@@ -405,6 +406,7 @@
     $('#revPos').textContent = T('{a} из {b}', { a: qi + 1, b: queue.length });
     $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + T(d.station || '') + ' · ' + (d.fLow / 1000).toFixed(1) + '–' + (d.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + d.snr + ' ' + T('дБ') + ' · ' + T(D.describe(d)) + (S.threatOf(d) ? ' · ⚠ ' + T(S.threatOf(d).kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') : S.soundKind(d) && S.soundKind(d) !== 'animal' ? ' · ' + T(SK[S.soundKind(d)]) : '');
     var sel = $('#revSel'); speciesOptions(sel, true);
+    var rti = $('#revTyped'); if (rti) { rti.value = ''; delete rti.dataset.id; }
     if (d.suggest) {
       var gid = S.sugId(d.suggest);
       if (!sel.querySelector('option[value="' + gid.replace(/"/g, '') + '"]')) { var go = document.createElement('option'); go.value = gid; go.textContent = S.sugName(d.suggest); sel.insertBefore(go, sel.lastChild); }
@@ -623,5 +625,5 @@
   /* ---------- start ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () { });
   show((location.hash || '#pulse').slice(1));
-  window.WEApp = { core: { eventCenters: eventCenters, aggregate: aggregate, b64: b64 }, analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, refreshChrome: refreshChrome, speciesOptions: speciesOptions, sndHtml: sndHtml, current: function () { return current; } };
+  window.WEApp = { core: { eventCenters: eventCenters, aggregate: aggregate, b64: b64, sessEvents: function () { return sess ? sess.events : []; } }, analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, refreshChrome: refreshChrome, speciesOptions: speciesOptions, sndHtml: sndHtml, current: function () { return current; } };
 })();

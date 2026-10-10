@@ -12,7 +12,14 @@
   }
   function norm(s) { return s.replace(/\s+/g, ' ').trim(); }
   function fill(s, v) { return v ? s.replace(/\{(\w+)\}/g, function (m, k) { return v[k] !== undefined ? v[k] : m; }) : s; }
-  function t(s, v) { var d = DICT[lang]; var r = (d && d[s] !== undefined) ? d[s] : s; return fill(r, v); }
+  function t(s, v) {
+    var d = DICT[lang], r = s;
+    if (d) {
+      if (d[s] !== undefined) r = d[s];
+      else { var k = s.trim(); if (k !== s && d[k] !== undefined) r = s.match(/^\s*/)[0] + d[k] + s.match(/\s*$/)[0]; }
+    }
+    return fill(r, v);
+  }
   /* text built in code: L(russian, english). English may be given inline; Kazakh always comes from the dictionary. */
   function L(ru, en) { return lang === 'ru' ? ru : lang === 'en' ? (en !== undefined ? en : t(ru)) : t(ru); }
   /* plural: ru = [one, few, many], en = [one, other] */

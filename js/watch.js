@@ -15,11 +15,11 @@
       var list = Array.isArray(row.watch) ? row.watch : [];
       window.WE_WATCH = list.map(function (w) { return w.id; });
       box.innerHTML = '<div class="chips">' + (list.length ? list.map(function (w) { return '<span class="chip wl">' + esc(w.name) + ' <button data-rm="' + esc(w.id) + '" aria-label="' + esc(L('Убрать', 'Remove')) + '">×</button></span>'; }).join('') : '<span class="hint">' + esc(L('Список пуст.', 'The list is empty.')) + '</span>') + '</div>' +
-        '<div class="row wrap"><input id="watchIn" list="speciesList" autocomplete="off" placeholder="' + esc(L('Вид, например Кудрявый пеликан', 'Species, for example Dalmatian Pelican')) + '"><button class="btn primary" id="watchAdd">' + esc(L('Добавить', 'Add')) + '</button></div>';
-      B.fillDatalist('speciesList');
+        '<div class="row wrap"><input id="watchIn" autocomplete="off" placeholder="' + esc(L('Вид, например Кудрявый пеликан', 'Species, for example Dalmatian Pelican')) + '"><button class="btn primary" id="watchAdd">' + esc(L('Добавить', 'Add')) + '</button></div>';
+      if (window.WEVoices) WEVoices.combo($('#watchIn'));
       var save = function (next) { WESync.tgSet({ watch: next }).then(renderWatch).catch(function () { A.toast(L('Не удалось сохранить. Возможно, администратор ещё не применил обновление базы.', 'Could not save. The administrator may not have applied the database update yet.')); }); };
       $('#watchAdd').addEventListener('click', function () {
-        var r = B.resolveSpecies($('#watchIn').value); if (!r) return;
+        var inp = $('#watchIn'), r = (window.WEVoices && WEVoices.comboValue(inp)) || B.resolveSpecies(inp.value); if (!r) { A.toast(L('Выберите вид из подсказок', 'Pick a species from the suggestions')); return; }
         if (list.some(function (w) { return w.id === r.id; })) { A.toast(L('Уже в списке', 'Already in the list')); return; }
         if (list.length >= 30) { A.toast(L('Не больше 30 видов', 'At most 30 species')); return; }
         save(list.concat([{ id: r.id, name: r.name }]));

@@ -63,7 +63,8 @@
     for (var i = 0; i < out.length; i++) { var x = Math.max(-1, Math.min(1, samples[a + i])); out[i] = x < 0 ? x * 32768 : x * 32767; }
     return out;
   }
-  function processFile(f, mode, label) {
+  /* decode, find events and (when signed in) ask the server for species suggestions and fingerprints; nothing is saved here */
+  function analyse(f) {
     return f.arrayBuffer().then(function (ab) {
       var copy = ab.slice(0);
       return D.decode(ab).then(function (samples) {
@@ -71,24 +72,27 @@
         if (samples.length < 4096) throw new Error('short');
         return sleep(20).then(function () {
           var sp = D.spectrogram(samples), events = D.detect(sp, SNR).map(function (e) { e.status = 'auto'; e.species = null; return e; });
-          if (!events.length) return { n: 0 };
+          if (!events.length) return { events: [], samples: samples, dur: sp.dur };
           var signed = window.WESync && WESync.token();
           var go = signed ? D.decode(copy, 48000).then(function (s48) { return identify(events, s48, sp.dur); }).catch(function (e) { if (e && e.auth) throw e; /* suggestions failed: keep the events without them */ }) : Promise.resolve();
-          return go.then(function () {
-            var keep = events;
-            if (mode === 'teach') {
-              keep = events.filter(function (e) { var g = e.sound && e.sound.groups; return !g || g.animal === undefined || g.animal >= .25; }).sort(function (a, b) { return b.snr - a.snr; }).slice(0, TEACH_KEEP);
-              keep.forEach(function (e) { e.status = 'confirmed'; e.species = label.id; });
-            }
-            if (!keep.length) return { n: 0 };
-            var evs = keep.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null,
-              suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
-            S.addRecording({ name: f.name.replace(/\.[^.]+$/, ''), start: new Date(f.lastModified || Date.now()).toISOString(), dur: sp.dur }, evs, keep.map(function (e) { return clipOf(samples, e); }));
-            return { n: evs.length };
-          });
+          return go.then(function () { return { events: events, samples: samples, dur: sp.dur }; });
         });
       });
     });
+  }
+  function saveEvents(f, events, samples, dur) {
+    if (!events.length) return 0;
+    var evs = events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null,
+      suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
+    S.addRecording({ name: f.name.replace(/\.[^.]+$/, ''), start: new Date(f.lastModified || Date.now()).toISOString(), dur: dur }, evs, events.map(function (e) { return clipOf(samples, e); }));
+    return evs.length;
+  }
+  /* the sounds worth keeping from one file when teaching a voice: the clearest ones that look like an animal */
+  function bestSounds(events, n) {
+    return events.filter(function (e) { var g = e.sound && e.sound.groups; return !g || g.animal === undefined || g.animal >= .25; }).sort(function (a, b) { return b.snr - a.snr; }).slice(0, n || TEACH_KEEP);
+  }
+  function processFile(f) {
+    return analyse(f).then(function (a) { return { n: saveEvents(f, a.events, a.samples, a.dur) }; });
   }
 
   /* ---------- queue and screen ---------- */
@@ -124,7 +128,7 @@
       var q = queue.filter(function (x) { return x.state === 'wait'; })[0];
       if (!q || stopFlag) { running = false; render(); if (!q) A.toast(L('Пакет обработан. Событий сохранено: ', 'Batch finished. Events saved: ') + stats.ev); if (window.WESync && WESync.syncNow) WESync.syncNow(true); A.refreshChrome(); return; }
       q.state = 'run'; render();
-      processFile(q.f, m, label).then(function (r) { q.state = r.n ? 'ok' : 'skip'; q.msg = r.n ? '+' + r.n : L('событий нет', 'no events'); stats.ev += r.n; stats.ok++; })
+      processFile(q.f).then(function (r) { q.state = r.n ? 'ok' : 'skip'; q.msg = r.n ? '+' + r.n : L('событий нет', 'no events'); stats.ev += r.n; stats.ok++; })
         .catch(function (e) { q.state = 'fail'; q.msg = e && e.auth ? L('нужен вход', 'sign in') : e && e.message === 'short' ? L('слишком короткий', 'too short') : L('не прочитан', 'unreadable'); stats.fail++; if (e && e.auth) stopFlag = true; })
         .then(function () { render(); return sleep(30); }).then(next);
     };
@@ -141,6 +145,6 @@
     [].forEach.call(document.querySelectorAll('input[name="bmode"]'), function (r) { r.addEventListener('change', function () { $('#teachBox').hidden = mode() !== 'teach'; }); });
     render();
   }
-  window.WEBatch = { resolveSpecies: resolveSpecies, fillDatalist: fillDatalist, speciesChoices: speciesChoices };
+  window.WEBatch = { resolveSpecies: resolveSpecies, fillDatalist: fillDatalist, speciesChoices: speciesChoices, analyse: analyse, saveEvents: saveEvents, bestSounds: bestSounds, clipOf: clipOf };
   init();
 })();

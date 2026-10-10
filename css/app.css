@@ -422,3 +422,24 @@ input:focus, select:focus { outline: 3px solid rgba(31, 91, 255, .25); outline-o
 @media (max-width: 760px) { .card { padding: 16px; border-radius: 18px; } main { padding-top: 14px; } .view:not(#v-pulse) > h1 { margin-bottom: 8px; } }
 .banner { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; font-size: .86rem; padding: 8px 12px; border-radius: 14px; margin-bottom: 10px; }
 .banner .link { font-weight: 700; white-space: nowrap; }
+
+/* ---- voices and datasets ---- */
+.combo { position: relative; display: block; max-width: 440px; }
+.combo input { width: 100%; }
+.combo-list { position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; background: #fff; border: 1px solid var(--field); border-radius: 14px; box-shadow: 0 16px 40px -18px rgba(11, 27, 58, .35); max-height: 280px; overflow: auto; }
+.combo-list li { display: flex; flex-direction: column; gap: 1px; padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: .92rem; }
+.combo-list li em { font-style: italic; color: var(--soft); font-size: .76rem; }
+.combo-list li.on, .combo-list li:hover { background: var(--sky); }
+.combo-list li.new { color: var(--blue); font-weight: 650; }
+.acts .combo, .rev-ctl .combo { max-width: 220px; }
+.refbtn { border: 0; background: var(--sky); color: var(--blue); width: 28px; height: 28px; border-radius: 50%; font-size: .9rem; line-height: 1; cursor: pointer; margin-left: -4px; }
+.refbtn:hover { background: #d4e1ff; }
+#refBar { position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 10px 14px; background: var(--ink); color: #fff; border-radius: 16px; box-shadow: 0 18px 40px -16px rgba(11, 27, 58, .6); font-size: .86rem; }
+#refBar a { color: #9DB9FF; } #refBar .btn.sm { min-height: 30px; padding: 0 12px; background: rgba(255, 255, 255, .12); border-color: transparent; color: #fff; box-shadow: none; }
+@media (min-width: 761px) { #refBar { bottom: 24px; } }
+.voice { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.voice:last-child { border-bottom: 0; } .v-main small { display: block; color: var(--soft); font-style: italic; } .v-meta { grid-column: 1; font-size: .88rem; color: var(--soft); } .v-act { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.chip.q-low { background: #FFF1D6; color: #8A5A00; } .chip.q-mid { background: var(--sky); color: var(--blue); } .chip.q-hi { background: #E2F5EA; color: var(--ok); }
+.steps { display: flex; gap: 6px; margin: 0 0 14px; flex-wrap: wrap; } .steps span { padding: 5px 12px; border-radius: 99px; background: #EEF3FC; color: var(--soft); font-size: .8rem; font-weight: 650; } .steps span.on { background: var(--blue); color: #fff; } .steps span.done { background: #E2F5EA; color: var(--ok); }
+.found { list-style: none; margin: 8px 0 14px; padding: 0; max-height: 380px; overflow: auto; } .found li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .86rem; } .found label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+@media (max-width: 560px) { .voice { grid-template-columns: 1fr; } .v-act { grid-column: 1; grid-row: auto; justify-content: flex-start; } .acts .combo, .rev-ctl .combo { max-width: none; } }
