@@ -3,11 +3,12 @@
    who checks the event, never a rule: recordists are not spread evenly over the year and rare species have few recordings. */
 (function () {
   'use strict';
-  var S = window.WEStore, data = null, loading = false;
+  var S = window.WEStore, data = null, loading = false, sizes = null;
   function L(ru, en) { return window.WEi18n ? WEi18n.L(ru, en) : ru; }
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function load() {
     if (data || loading) return; loading = true;
+    fetch('models/data_size.json').then(function (r) { return r.json(); }).then(function (j) { sizes = j; }).catch(function () { sizes = {}; });
     fetch('models/phenology.json').then(function (r) { return r.json(); }).then(function (j) { data = j; }).catch(function () { data = {}; }).then(function () { loading = false; });
   }
   function sciOf(s) {
@@ -38,6 +39,8 @@
   function chip(sug, when) {
     var out = '', r = check(sug, when);
     if (r && r.unusual) { var tip = r.months.length ? L('Обычно записывают: ', 'Usually recorded: ') + range(r.months) : ''; out += '<em title="' + esc(tip) + '">' + esc(L('необычно для сезона', 'unusual for the season')) + '</em>'; }
+    var n = sizes && sizes[sciOf(sug)];
+    if (n != null && n < 15) out += '<em class="lo" title="' + esc(L('В обучении модели мало записей этого вида (' + n + '), поэтому доверять оценке стоит меньше', 'The model was trained on few recordings of this species (' + n + '), so trust the score less')) + '">' + esc(L('мало примеров у модели', 'few training examples')) + '</em>';
     if (newHere(sug)) out += '<em class="nw" title="' + esc(L('Этот вид ещё ни разу не подтверждали на вашей станции', 'This species has never been confirmed at your station')) + '">' + esc(L('новый для станции', 'new for the station')) + '</em>';
     return out;
   }

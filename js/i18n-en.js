@@ -682,5 +682,14 @@
  "◆ модель WetlandEar, остальные BirdNET. Проценты разных моделей не складываются: в одном звуке могут петь несколько птиц.": "◆ WetlandEar model, the others BirdNET. Percentages of different models do not add up: several birds can sing in one sound.",
  "В этом звуке поёт ещё одна птица": "Another bird sings in this sound",
  "ещё вид": "one more species",
- "Добавлена копия звука: выберите другой вид": "A copy of the sound was added: choose another species"
+ "Добавлена копия звука: выберите другой вид": "A copy of the sound was added: choose another species",
+ "В обучении модели мало записей этого вида (": "The model was trained on few recordings of this species (",
+ "мало примеров у модели": "few training examples",
+ "Быстрые действия": "Quick actions",
+ "Что хотите сделать?": "What do you want to do?",
+ "Ничего не найдено. Попробуйте другое слово: «отчёт», «карта», «файлы».": "Nothing found. Try another word: \"report\", \"map\", \"files\".",
+ "выбрать": "select",
+ "открыть": "open",
+ "Все разделы": "All sections",
+ "Быстрые действия (Ctrl+K)": "Quick actions (Ctrl+K)"
 }); })();

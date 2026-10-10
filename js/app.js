@@ -47,7 +47,7 @@
     if (!$('#v-' + view)) view = 'pulse';
     current = view;
     $$('.view').forEach(function (v) { v.classList.toggle('on', v.id === 'v-' + view); });
-    $$('.tabs button').forEach(function (b) { b.classList.toggle('on', (b.dataset.group || b.dataset.view).split(',').indexOf(view) >= 0); });
+    $$('.tabs button[data-view]').forEach(function (b) { b.classList.toggle('on', (b.dataset.group || b.dataset.view).split(',').indexOf(view) >= 0); });
     if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
     window.scrollTo(0, 0);
     if (view === 'pulse') renderPulse();
@@ -57,7 +57,7 @@
     if (view === 'profile') renderProfile();
     if (window.WEX) window.WEX.onShow(view);
   }
-  $$('.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
+  $$('.tabs button[data-view]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
   $$('[data-go]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.go); }); });
   window.addEventListener('hashchange', function () { show(location.hash.slice(1) || 'pulse'); });
 
