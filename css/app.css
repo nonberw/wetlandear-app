@@ -443,3 +443,8 @@ input:focus, select:focus { outline: 3px solid rgba(31, 91, 255, .25); outline-o
 .steps { display: flex; gap: 6px; margin: 0 0 14px; flex-wrap: wrap; } .steps span { padding: 5px 12px; border-radius: 99px; background: #EEF3FC; color: var(--soft); font-size: .8rem; font-weight: 650; } .steps span.on { background: var(--blue); color: #fff; } .steps span.done { background: #E2F5EA; color: var(--ok); }
 .found { list-style: none; margin: 8px 0 14px; padding: 0; max-height: 380px; overflow: auto; } .found li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .86rem; } .found label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 @media (max-width: 560px) { .voice { grid-template-columns: 1fr; } .v-act { grid-column: 1; grid-row: auto; justify-content: flex-start; } .acts .combo, .rev-ctl .combo { max-width: none; } }
+
+/* offline mode */
+.off-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.off-status { display: inline-flex; gap: 8px; align-items: center; font-weight: 700; } .off-dot { width: 12px; height: 12px; border-radius: 50%; background: #C7D3EA; } .off-dot.on { background: var(--ok); }
+.seg.wide { display: flex; width: 100%; max-width: 460px; } .seg.wide button { flex: 1; padding: 0 8px; }

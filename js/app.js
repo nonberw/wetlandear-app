@@ -43,6 +43,7 @@
   /* ---------- navigation ---------- */
   var current = 'pulse';
   function show(view) {
+    view = String(view || '').replace(/[^a-z]/g, '');   /* a stray address like #pulse?x=1 must not break the app */
     if (!$('#v-' + view)) view = 'pulse';
     current = view;
     $$('.view').forEach(function (v) { v.classList.toggle('on', v.id === 'v-' + view); });
@@ -266,7 +267,7 @@
   }
   function runIdentify() {
     if (!sess || !sess.events.length) { setIdState(''); var rs0 = $('#recSummary'); if (rs0) rs0.hidden = true; return; }
-    if (!window.WESync || !WESync.token()) { setIdState('Подсказки видов доступны после входа через Google. Нажмите «Войти» вверху.'); return; }
+    if (!window.WEIdentify || !WEIdentify.canRun()) { setIdState('Подсказки видов доступны после входа через Google. Нажмите «Войти» вверху.'); return; }
     if (!sess.s48) { setIdState('Готовлю звук для определения...'); return; }
     var seq = ++idSeq, evs = sess.events, st = S.get().station, chain = Promise.resolve(), failed = false, all = [];
     /* strongest events first, capped so one request batch stays quick */
@@ -282,8 +283,7 @@
       chain = chain.then(function () {
         if (seq !== idSeq || failed) return;
         var part = jobs.slice(from, from + 10);
-        return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + WESync.token() }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (j) { return b64(windowAt(j.c)); }) }) })
-          .then(function (r) { if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; } if (!r.ok) throw new Error('http'); return r.json(); })
+        return WEIdentify.run({ lat: st.lat, lon: st.lon, windows: part.map(function (j) { return b64(windowAt(j.c)); }) })
           .then(function (j) {
             if (seq !== idSeq || !sess || sess.events !== evs) return;
             j.results.forEach(function (it, k) { var ev = part[k].ev; ev._res.push(it); all.push(it); if (ev._res.length === ev._need) aggregate(ev); });

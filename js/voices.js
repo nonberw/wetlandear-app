@@ -231,7 +231,7 @@
   }
   function renderWiz() {
     var el = wiz(); if (!el) return;
-    var signed = window.WESync && WESync.token();
+    var signed = window.WEIdentify && WEIdentify.canRun();
     var steps = ['1 ' + L('Вид', 'Species'), '2 ' + L('Записи', 'Recordings'), '3 ' + L('Проверка', 'Check'), '4 ' + L('Готово', 'Done')];
     var head = '<div class="steps">' + steps.map(function (s, i) { return '<span class="' + (i + 1 === W.step ? 'on' : i + 1 < W.step ? 'done' : '') + '">' + esc(s) + '</span>'; }).join('') + '</div>';
     if (!signed) { el.innerHTML = head + '<p class="hint">' + esc(L('Чтобы учить голоса, войдите через Google: звуки превращаются в «отпечатки» на нашем сервере. Сами записи остаются у вас.', 'To teach voices, sign in with Google: sounds are turned into fingerprints on our server. The recordings stay with you.')) + '</p>'; return; }
@@ -321,7 +321,7 @@
   }
   function renderImport() {
     var box = $('#dsImport'); if (!box) return;
-    var signed = window.WESync && WESync.token();
+    var signed = window.WEIdentify && WEIdentify.canRun();
     if (!DS.groups) {
       box.innerHTML = '<p class="hint">' + esc(L('Выберите папку, внутри которой подпапки названы по видам, например Pelecanus_crispus/ или Кудрявый пеликан/ с записями внутри. Приложение само найдёт звуки, сохранит лучшие как подтверждённые образцы этого вида и начнёт их узнавать.', 'Choose a folder with one sub-folder per species, for example Pelecanus_crispus/ or Dalmatian Pelican/ with recordings inside. The app finds the sounds, saves the best ones as confirmed samples of that species and starts recognising them.')) + '</p>' +
         '<div class="row wrap"><label class="btn' + (signed ? ' primary' : '') + '">' + esc(L('Выбрать папку с видами', 'Choose the species folder')) + '<input type="file" id="dsDir" webkitdirectory multiple hidden' + (signed ? '' : ' disabled') + '></label></div>' + (signed ? '' : '<p class="hint">' + esc(L('Нужен вход через Google.', 'Sign-in is needed.')) + '</p>') + '<ul class="batch-list" id="dsLog"></ul>';

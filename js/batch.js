@@ -51,8 +51,7 @@
     for (var from = 0; from < jobs.length; from += 10) (function (from) {
       chain = chain.then(function () {
         var part = jobs.slice(from, from + 10);
-        return fetch('/api/identify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + WESync.token() }, body: JSON.stringify({ lat: st.lat, lon: st.lon, windows: part.map(function (j) { return C.b64(windowAt(s48, dur, j.c)); }) }) })
-          .then(function (r) { if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; } if (!r.ok) throw new Error('http'); return r.json(); })
+        return WEIdentify.run({ lat: st.lat, lon: st.lon, windows: part.map(function (j) { return C.b64(windowAt(s48, dur, j.c)); }) })
           .then(function (j) { j.results.forEach(function (it, k) { var ev = part[k].ev; ev._res.push(it); if (ev._res.length === ev._need) C.aggregate(ev); }); });
       });
     })(from);
@@ -73,7 +72,7 @@
         return sleep(20).then(function () {
           var sp = D.spectrogram(samples), events = D.detect(sp, SNR).map(function (e) { e.status = 'auto'; e.species = null; return e; });
           if (!events.length) return { events: [], samples: samples, dur: sp.dur };
-          var signed = window.WESync && WESync.token();
+          var signed = window.WEIdentify && WEIdentify.canRun();
           var go = signed ? D.decode(copy, 48000).then(function (s48) { return identify(events, s48, sp.dur); }).catch(function (e) { if (e && e.auth) throw e; /* suggestions failed: keep the events without them */ }) : Promise.resolve();
           return go.then(function () { return { events: events, samples: samples, dur: sp.dur }; });
         });
