@@ -189,14 +189,17 @@
     ul.innerHTML = evs.map(function (e, i) {
       var nm = spName(e.species), st = e.status === 'auto' && e.auto ? '<span class="badge mod">' + esc(T('модель')) + ' ' + Math.round(e.autoConf * 100) + '%</span>' : lvlBadge(e);
       return '<li class="evc ' + (i === sess.sel ? 'sel ' : '') + (e.status === 'confirmed' ? 'ok' : e.status === 'rejected' ? 'no' : '') + '" data-i="' + i + '"><div><div class="t">' + (i + 1) + '. ' + esc(nm || D.describe(e)) + st + '</div>' +
-        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="sugs">' + e.suggest.map(function (s, k) { return '<button class="sug' + (s.own ? ' own' : s.head ? ' head' : '') + '" data-a="sug" data-k="' + k + '" title="' + esc(s.own ? 'по вашим записям' : s.head ? 'модель WetlandEar, обучена на записях Xeno-canto' : s.sci) + '">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + ' <b>' + Math.round(s.conf * 100) + '%</b></button><button class="refbtn" data-a="ref" data-k="' + k + '" title="' + esc(T('Послушать эталон')) + '" aria-label="' + esc(T('Послушать эталон')) + '">♪</button>'; }).join('') + '</div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
+        (e.status === 'auto' && e.suggest && e.suggest.length ? '<div class="cands" role="radiogroup" aria-label="' + esc(T('Что это может быть')) + '">' + e.suggest.map(function (s, k) {
+          var sid = S.sugId(s), pct = Math.round(s.conf * 100), on = e.species === sid;
+          return '<div class="cand' + (on ? ' on' : '') + (s.own ? ' own' : s.head ? ' head' : '') + '" data-a="sug" data-k="' + k + '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" tabindex="0" title="' + esc(s.own ? T('по вашим записям') : s.head ? T('модель WetlandEar, обучена на записях Xeno-canto') : s.sci) + '"><span class="cn">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + (window.WEPheno ? WEPheno.chip(s) : '') + '</span><span class="cb"><i style="--w:' + pct + '%"></i></span><b>' + pct + '%</b><button class="refbtn" data-a="ref" data-k="' + k + '" title="' + esc(T('Послушать эталон')) + '" aria-label="' + esc(T('Послушать эталон')) + '">♪</button></div>';
+        }).join('') + '<p class="cand-note">' + esc(T('◆ модель WetlandEar, остальные BirdNET. Проценты разных моделей не складываются: в одном звуке могут петь несколько птиц.')) + '</p></div>' : '') + sndHtml(e) + '<div class="m">' + e.t0.toFixed(1) + ' ' + T('с') + ', ' + (e.t1 - e.t0).toFixed(1) + ' ' + T('с') + ' · ' + (e.fLow / 1000).toFixed(1) + '–' + (e.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + e.snr + ' ' + T('дБ') + '</div></div>' +
         '<button class="btn" data-a="play" aria-label="Слушать">▶</button>' +
-        '<div class="acts"><input class="spt" data-combo type="text" placeholder="' + esc(T('или введите вид')) + '"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
+        '<div class="acts"><button class="btn sm" data-a="more" title="' + esc(T('В этом звуке поёт ещё одна птица')) + '">+ ' + esc(T('ещё вид')) + '</button><input class="spt" data-combo type="text" placeholder="' + esc(T('или введите вид')) + '"><select data-a="sp" aria-label="Вид"></select><button class="btn primary" data-a="yes">Верно</button><button class="btn no" data-a="no">Ошибка</button></div></li>';
     }).join('');
     $$('#events select').forEach(function (s, i) { speciesOptions(s, true); var sp = evs[i].species; if (sp) { if (!S.species[sp]) { var o = document.createElement('option'); o.value = sp; o.textContent = spName(sp); s.insertBefore(o, s.lastChild); } s.value = sp; } });
   }
   /* species suggestions from BirdNET running on our server; always a suggestion, never an observation */
-  var idTimer = 0, idSeq = 0, SUGMIN = .2, AUTOMIN = .3, OWNMIN = .72;
+  var idTimer = 0, idSeq = 0, SUGMIN = .1, AUTOMIN = .3, OWNMIN = .72;
   /* Compare with the voices you confirmed before (works for species the model has never heard, such as pelicans). */
   function ownPick(ev) {
     if (!ev.emb || ev.status !== 'auto') return;
@@ -204,7 +207,7 @@
     var top = ev.suggest && ev.suggest[0], topId = top && S.sugId(top);
     if (topId === m.id) { top.own = true; return; }
     if (top && top.conf >= .7 && m.id.indexOf('x:') !== 0 && m.sim < .8) return;
-    ev.suggest = [{ id: m.id, sci: null, common: S.nameOf(m.id), conf: Math.min(.99, m.sim), own: true }].concat(ev.suggest || []).slice(0, 3);
+    ev.suggest = [{ id: m.id, sci: null, common: S.nameOf(m.id), conf: Math.min(.99, m.sim), own: true }].concat(ev.suggest || []).slice(0, 5);
   }
   /* Fill the species in automatically unless a person already decided, or the sound looks like wind, rain or speech. */
   function autoPick(ev) {
@@ -239,11 +242,11 @@
       var g = (r.sound && r.sound.groups) || {}; Object.keys(g).forEach(function (k) { groups[k] = Math.max(groups[k] || 0, g[k]); });
     });
     ev.suggest = Object.keys(m).map(function (k) { return { sci: m[k].sci, common: m[k].common, conf: m[k].sum / n }; })
-      .filter(function (s) { return s.conf >= SUGMIN; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 3);
+      .filter(function (s) { return s.conf >= SUGMIN; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 5);
     var hm = {};
     rs.forEach(function (r) { (r.head || []).forEach(function (s) { var o = hm[s.sci] || (hm[s.sci] = { sci: s.sci, common: s.common, sum: 0 }); o.sum += s.conf; }); });
     var heads = Object.keys(hm).map(function (k) { return { sci: hm[k].sci, common: hm[k].common, conf: hm[k].sum / n, head: true }; }).filter(function (s) { return s.conf >= .25; }).sort(function (a, b) { return b.conf - a.conf; }).slice(0, 1);
-    if (heads.length) ev.suggest = heads.concat(ev.suggest.filter(function (s) { return s.sci !== heads[0].sci; })).slice(0, 3);
+    if (heads.length) ev.suggest = heads.concat(ev.suggest.filter(function (s) { return s.sci !== heads[0].sci; })).slice(0, 5);
     var mid = rs[Math.floor(n / 2)];
     ev.sound = { top: (mid.sound && mid.sound.top) || [], groups: groups };
     ev.emb = mid.emb ? S.packEmb(mid.emb) : null;
@@ -321,6 +324,10 @@
   $('#events').addEventListener('click', function (e) {
     var li = e.target.closest('.evc'); if (!li) return; var i = +li.dataset.i, ev = sess.events[i], a = e.target.dataset.a;
     if (a === 'play') { selectEvent(i, true); return; }
+    if (a === 'more') {
+      var cp = {}; Object.keys(ev).forEach(function (k) { cp[k] = ev[k]; }); cp.species = null; cp.status = 'auto'; cp.auto = false; cp.autoConf = null; cp.suggest = (ev.suggest || []).filter(function (x) { return S.sugId(x) !== ev.species; });
+      sess.events.splice(i + 1, 0, cp); sess.saved = false; renderEvents(); var nx = $('#events [data-i="' + (i + 1) + '"] input[data-combo]'); if (nx) nx.focus({ preventScroll: false }); toast(T('Добавлена копия звука: выберите другой вид')); return;
+    }
     var chip = e.target.closest('[data-a="sug"]');
     if (chip) {
       var sg = ev.suggest[+chip.dataset.k], sid = S.sugId(sg); ev.species = sid; ev.auto = true; ev.autoConf = sg.conf; sess.saved = false; renderEvents();
@@ -333,6 +340,7 @@
     }
     if (a === 'no') { ev.status = 'rejected'; ev.species = null; ev.auto = false; sess.saved = false; renderEvents(); return; }
   });
+  $('#events').addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.cand')) { e.preventDefault(); e.target.click(); } });
   $('#events').addEventListener('change', function (e) {
     if (e.target.dataset.a !== 'sp') return;
     var li = e.target.closest('.evc'), ev = sess.events[+li.dataset.i], id = pickSpecies(e.target); if (id) { ev.species = id; ev.auto = false; }
@@ -350,7 +358,7 @@
       for (var i = 0; i < out.length; i++) { var x = Math.max(-1, Math.min(1, sess.samples[a + i])); out[i] = x < 0 ? x * 32768 : x * 32767; }
       return out;
     });
-    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
+    var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf, alts: e.suggest.slice(1, 5).map(function (x) { return { id: x.id || null, own: !!x.own, head: !!x.head, sci: x.sci, common: x.common, conf: x.conf }; }) } : null }; });
     S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur, idx: (window.WEIndices && WEIndices.compute(sess.sp)) || undefined }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
     toast(T('Сохранено: {n} {w}', { n: evs.length, w: plural(evs.length, 'событие', 'события', 'событий') }));
@@ -398,6 +406,22 @@
   function loadReview() {
     queue = reviewQueue(); qi = 0; refreshChrome(); showReview();
   }
+  /* the model's other guesses for the event under review: tap one to choose it */
+  function revCands(d) {
+    var box = $('#revCands'); if (!box) return;
+    var list = d.suggest ? [d.suggest].concat(d.suggest.alts || []) : [];
+    if (!list.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="cands">' + list.map(function (s, k) { var pct = Math.round((s.conf || 0) * 100), sid = S.sugId(s);
+      return '<div class="cand' + (k === 0 ? ' on' : '') + (s.own ? ' own' : s.head ? ' head' : '') + '" data-id="' + esc(sid) + '" data-n="' + esc(S.sugName(s)) + '" role="radio" aria-checked="' + (k === 0 ? 'true' : 'false') + '" tabindex="0"><span class="cn">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + (window.WEPheno ? WEPheno.chip(s) : '') + '</span><span class="cb"><i style="--w:' + pct + '%"></i></span><b>' + pct + '%</b><button class="refbtn" data-ref="' + esc(sid) + '" title="' + esc(T('Послушать эталон')) + '">♪</button></div>'; }).join('') + '</div>';
+  }
+  function pickRevCand(el) {
+    var sel = $('#revSel'), id = el.dataset.id; if (!id) return;
+    if (!sel.querySelector('option[value="' + id.replace(/"/g, '') + '"]')) { var o = document.createElement('option'); o.value = id; o.textContent = el.dataset.n; sel.insertBefore(o, sel.lastChild); }
+    sel.value = id; var rt = $('#revTyped'); if (rt) { rt.value = ''; delete rt.dataset.id; }
+    [].forEach.call($$('#revCands .cand'), function (c) { var on = c === el; c.classList.toggle('on', on); c.setAttribute('aria-checked', on ? 'true' : 'false'); });
+  }
+  document.addEventListener('click', function (e) { var c = e.target.closest('#revCands .cand'); if (c && !e.target.closest('.refbtn')) pickRevCand(c); });
+  document.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#revCands .cand')) { e.preventDefault(); pickRevCand(e.target); } });
   function showReview() {
     var empty = !queue.length || qi >= queue.length;
     $('#revEmpty').hidden = !empty; $('#revCard').hidden = empty;
@@ -407,6 +431,7 @@
     $('#revMeta').textContent = fmtDT(d.ts) + ' · ' + T(d.station || '') + ' · ' + (d.fLow / 1000).toFixed(1) + '–' + (d.fHigh / 1000).toFixed(1) + ' ' + T('кГц') + ' · +' + d.snr + ' ' + T('дБ') + ' · ' + T(D.describe(d)) + (S.threatOf(d) ? ' · ⚠ ' + T(S.threatOf(d).kind === 'gun' ? 'возможный выстрел' : 'шум двигателя') : S.soundKind(d) && S.soundKind(d) !== 'animal' ? ' · ' + T(SK[S.soundKind(d)]) : '');
     var sel = $('#revSel'); speciesOptions(sel, true);
     var rti = $('#revTyped'); if (rti) { rti.value = ''; delete rti.dataset.id; }
+    revCands(d);
     if (d.suggest) {
       var gid = S.sugId(d.suggest);
       if (!sel.querySelector('option[value="' + gid.replace(/"/g, '') + '"]')) { var go = document.createElement('option'); go.value = gid; go.textContent = S.sugName(d.suggest); sel.insertBefore(go, sel.lastChild); }

@@ -672,5 +672,15 @@
  "Один раз нужно скачать около 47 МБ, лучше по Wi-Fi. Файлы хранятся в браузере. На слабом телефоне определение одного фрагмента занимает около секунды.": "About 47 MB to download once, preferably over Wi-Fi. The files are kept in the browser. On a weak phone recognising one fragment takes about a second.",
  "Часы утреннего хора": "Dawn chorus clock",
  "Звуковой ландшафт": "Soundscape",
- "Научные индексы звука, которые приложение считает для каждой записи: по ним видно, как меняется «здоровье» звуковой среды по сезонам.": "Scientific sound indices that the app computes for every recording: they show how the \"health\" of the sound environment changes through the seasons."
+ "Научные индексы звука, которые приложение считает для каждой записи: по ним видно, как меняется «здоровье» звуковой среды по сезонам.": "Scientific sound indices that the app computes for every recording: they show how the \"health\" of the sound environment changes through the seasons.",
+ "Обычно записывают:": "Usually recorded: ",
+ "необычно для сезона": "unusual for the season",
+ "Этот вид ещё ни разу не подтверждали на вашей станции": "This species has never been confirmed at your station",
+ "новый для станции": "new for the station",
+ "Что это может быть? Выберите вариант, впишите свой или отметьте ошибку.": "What could it be? Choose an option, type your own, or mark it as an error.",
+ "Что это может быть": "What it could be",
+ "◆ модель WetlandEar, остальные BirdNET. Проценты разных моделей не складываются: в одном звуке могут петь несколько птиц.": "◆ WetlandEar model, the others BirdNET. Percentages of different models do not add up: several birds can sing in one sound.",
+ "В этом звуке поёт ещё одна птица": "Another bird sings in this sound",
+ "ещё вид": "one more species",
+ "Добавлена копия звука: выберите другой вид": "A copy of the sound was added: choose another species"
 }); })();

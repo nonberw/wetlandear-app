@@ -86,7 +86,7 @@
       return 0;
     }
     var evs = events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null,
-      suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
+      suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf, alts: e.suggest.slice(1, 5).map(function (x) { return { id: x.id || null, own: !!x.own, head: !!x.head, sci: x.sci, common: x.common, conf: x.conf }; }) } : null }; });
     S.addRecording({ name: f.name.replace(/\.[^.]+$/, ''), start: new Date(f.lastModified || Date.now()).toISOString(), dur: dur, idx: idx }, evs, events.map(function (e) { return clipOf(samples, e); }));
     return evs.length;
   }
