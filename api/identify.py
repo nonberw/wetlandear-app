@@ -101,7 +101,7 @@ def _head():
             sci_idx = {l.split('_')[0]: i for i, l in enumerate(labels)}
             bn_labels = [str(c) for c in z['bn_labels']]
             _state['head'] = {'coef': z['coef'].astype('float32'), 'b': z['intercept'].astype('float32'), 'classes': [str(c) for c in z['classes']],
-                              'common': [str(c) for c in z['common']], 'T': float(z['T']), 'w': float(z['w']),
+                              'common': [str(c) for c in z['common']], 'T': float(z['T']), 'w': np.asarray(z['w'], dtype='float32'),
                               'bn_idx': np.array([sci_idx.get(l, -1) if l else -1 for l in bn_labels])}
         else:
             _state['head'] = None
