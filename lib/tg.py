@@ -138,7 +138,7 @@ def threat_of(sound):
     g = (sound or {}).get('groups') or {}
     if g.get('gun', 0) >= .35:
         return 'gun', g['gun']
-    if g.get('engine', 0) >= .5 and g.get('animal', 0) < .5:
+    if g.get('engine', 0) >= .3 and g.get('animal', 0) < .5:
         return 'engine', g['engine']
     return None
 

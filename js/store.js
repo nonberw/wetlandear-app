@@ -196,7 +196,7 @@
   function threatOf(d) {
     var g = d.sound && d.sound.groups; if (!g) return null;
     if (g.gun >= .35) return { kind: 'gun', score: g.gun };
-    if (g.engine >= .5 && g.animal < .5) return { kind: 'engine', score: g.engine };
+    if (g.engine >= .3 && g.animal < .5) return { kind: 'engine', score: g.engine };
     return null;
   }
 
