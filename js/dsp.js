@@ -82,7 +82,7 @@
       col.sort(function (x, y) { return x - y; });
       floor[i] = col.length ? col[Math.floor(col.length * .25)] : -120;
     }
-    return { db: sm, floor: floor, frames: F, bins: NB, hop: HOP, sr: SR, binHz: BINHZ, fmin: B0 * BINHZ, fmax: B1 * BINHZ, dur: samples.length / SR };
+    return { db: sm, raw: db, floor: floor, frames: F, bins: NB, hop: HOP, sr: SR, binHz: BINHZ, fmin: B0 * BINHZ, fmax: B1 * BINHZ, dur: samples.length / SR };
   }
 
   /* Event detection. sens: required SNR in dB (lower = more sensitive). */

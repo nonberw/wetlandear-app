@@ -38,7 +38,7 @@
   function check(r) { if (r.error) throw r.error; return r; }
 
   /* ---------- row mapping ---------- */
-  function recRow(r) { return { id: r.id, name: r.name || null, started_at: r.start || null, duration: r.dur || null, station: r.station || null, lat: r.lat == null ? null : r.lat, lon: r.lon == null ? null : r.lon }; }
+  function recRow(r) { return { id: r.id, name: r.name || null, started_at: r.start || null, duration: r.dur || null, station: r.station || null, lat: r.lat == null ? null : r.lat, lon: r.lon == null ? null : r.lon, idx: r.idx || null }; }
   function detRow(d) {
     return { id: d.id, rec_id: d.recId || null, ts: d.ts, t0: d.t0, t1: d.t1, f_low: d.fLow, f_high: d.fHigh, f_peak: d.fPeak, snr: d.snr, status: d.status, species: d.species || null,
       suggest: d.suggest || null, sound: d.sound || null, emb: d.emb || null, station: d.station || null, lat: d.lat == null ? null : d.lat, lon: d.lon == null ? null : d.lon, reviewed_at: d.reviewed || null };
@@ -47,7 +47,7 @@
     return { id: r.id, recId: r.rec_id, ts: r.ts, t0: r.t0, t1: r.t1, fLow: r.f_low, fHigh: r.f_high, fPeak: r.f_peak, snr: r.snr, status: r.status, species: r.species, suggest: r.suggest, sound: r.sound, emb: r.emb,
       station: r.station, lat: r.lat, lon: r.lon, reviewed: r.reviewed_at, clip: 'cloud', uid: r.user_id };
   }
-  function recFromRow(r) { return { id: r.id, name: r.name, start: r.started_at, dur: r.duration, station: r.station, lat: r.lat, lon: r.lon, uid: r.user_id }; }
+  function recFromRow(r) { return { id: r.id, name: r.name, start: r.started_at, dur: r.duration, station: r.station, lat: r.lat, lon: r.lon, uid: r.user_id, idx: r.idx || undefined }; }
 
   /* ---------- push ---------- */
   function chunks(a, n) { var o = []; for (var i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; }
@@ -55,7 +55,14 @@
     if (!user) return Promise.resolve();
     var st = S.get(), mine = function (x) { return !x.demo && (!x.uid || x.uid === user.id); }, recs = st.recs.filter(mine).map(recRow), dets = st.dets.filter(mine).map(detRow);
     var p = Promise.resolve();
-    if (recs.length) p = p.then(function () { return sb.from('recordings').upsert(recs).then(check); });
+    if (recs.length) p = p.then(function () {
+      return sb.from('recordings').upsert(recs).then(function (r) {
+        if (r.error && /idx/i.test(r.error.message || '')) {   /* the database has no column for the soundscape indices yet: save the rest */
+          return sb.from('recordings').upsert(recs.map(function (x) { var y = Object.assign({}, x); delete y.idx; return y; })).then(check);
+        }
+        return check(r);
+      });
+    });
     chunks(dets, 400).forEach(function (c) { p = p.then(function () { return sb.from('detections').upsert(c).then(check); }); });
     return p.then(function () { maybeAlert(st.dets); });
   }

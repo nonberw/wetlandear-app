@@ -448,3 +448,11 @@ input:focus, select:focus { outline: 3px solid rgba(31, 91, 255, .25); outline-o
 .off-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
 .off-status { display: inline-flex; gap: 8px; align-items: center; font-weight: 700; } .off-dot { width: 12px; height: 12px; border-radius: 50%; background: #C7D3EA; } .off-dot.on { background: var(--ok); }
 .seg.wide { display: flex; width: 100%; max-width: 460px; } .seg.wide button { flex: 1; padding: 0 8px; }
+
+/* soundscape and dawn chorus */
+.choir { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 14px 22px; align-items: start; }
+.choir svg { width: 100%; height: auto; display: block; }
+.choir svg .seg { cursor: pointer; transition: fill-opacity .2s; }
+.legend { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: .86rem; } .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 8px; vertical-align: -1px; }
+@media (max-width: 700px) { .choir { grid-template-columns: 1fr; } }
+#soundBody h3 small { color: var(--soft); font-weight: 600; margin-left: 6px; } #soundBody h4 { margin: 14px 0 4px; font-size: .88rem; color: var(--soft); } #soundBody .seg { margin: 4px 0 8px; }

@@ -71,19 +71,23 @@
         if (samples.length < 4096) throw new Error('short');
         return sleep(20).then(function () {
           var sp = D.spectrogram(samples), events = D.detect(sp, SNR).map(function (e) { e.status = 'auto'; e.species = null; return e; });
-          if (!events.length) return { events: [], samples: samples, dur: sp.dur };
+          var idx = window.WEIndices ? WEIndices.compute(sp) : null;
+          if (!events.length) return { events: [], samples: samples, dur: sp.dur, idx: idx };
           var signed = window.WEIdentify && WEIdentify.canRun();
           var go = signed ? D.decode(copy, 48000).then(function (s48) { return identify(events, s48, sp.dur); }).catch(function (e) { if (e && e.auth) throw e; /* suggestions failed: keep the events without them */ }) : Promise.resolve();
-          return go.then(function () { return { events: events, samples: samples, dur: sp.dur }; });
+          return go.then(function () { return { events: events, samples: samples, dur: sp.dur, idx: idx }; });
         });
       });
     });
   }
-  function saveEvents(f, events, samples, dur) {
-    if (!events.length) return 0;
+  function saveEvents(f, events, samples, dur, idx) {
+    if (!events.length) {
+      if (idx) S.addRecording({ name: f.name.replace(/\.[^.]+$/, ''), start: new Date(f.lastModified || Date.now()).toISOString(), dur: dur, idx: idx }, [], []);   /* a silent recording still tells about the soundscape */
+      return 0;
+    }
     var evs = events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null,
       suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
-    S.addRecording({ name: f.name.replace(/\.[^.]+$/, ''), start: new Date(f.lastModified || Date.now()).toISOString(), dur: dur }, evs, events.map(function (e) { return clipOf(samples, e); }));
+    S.addRecording({ name: f.name.replace(/\.[^.]+$/, ''), start: new Date(f.lastModified || Date.now()).toISOString(), dur: dur, idx: idx }, evs, events.map(function (e) { return clipOf(samples, e); }));
     return evs.length;
   }
   /* the sounds worth keeping from one file when teaching a voice: the clearest ones that look like an animal */
@@ -91,7 +95,7 @@
     return events.filter(function (e) { var g = e.sound && e.sound.groups; return !g || g.animal === undefined || g.animal >= .25; }).sort(function (a, b) { return b.snr - a.snr; }).slice(0, n || TEACH_KEEP);
   }
   function processFile(f) {
-    return analyse(f).then(function (a) { return { n: saveEvents(f, a.events, a.samples, a.dur) }; });
+    return analyse(f).then(function (a) { return { n: saveEvents(f, a.events, a.samples, a.dur, a.idx) }; });
   }
 
   /* ---------- queue and screen ---------- */

@@ -351,7 +351,7 @@
       return out;
     });
     var evs = sess.events.map(function (e) { return { t0: e.t0, t1: e.t1, fLow: e.fLow, fHigh: e.fHigh, fPeak: e.fPeak, snr: e.snr, status: e.status, species: e.species, clipPad: .25, sound: e.sound || null, emb: e.emb || null, suggest: e.suggest && e.suggest[0] ? { id: e.suggest[0].id || null, own: !!e.suggest[0].own, head: !!e.suggest[0].head, sci: e.suggest[0].sci, common: e.suggest[0].common, conf: e.suggest[0].conf } : null }; });
-    S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur }, evs, clips);
+    S.addRecording({ name: sess.name, start: sess.start, dur: sess.dur, idx: (window.WEIndices && WEIndices.compute(sess.sp)) || undefined }, evs, clips);
     sess.saved = true; renderEvents(); refreshChrome();
     toast(T('Сохранено: {n} {w}', { n: evs.length, w: plural(evs.length, 'событие', 'события', 'событий') }));
   });
