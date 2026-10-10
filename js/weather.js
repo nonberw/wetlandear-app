@@ -5,7 +5,7 @@
   function $(s, r) { return (r || document).querySelector(s); }
   var esc = A.esc, days = 30, busy = false;
   function lang() { return window.WEi18n ? window.WEi18n.lang : 'ru'; }
-  function L(ru, en) { return lang() === 'ru' ? ru : (window.WEi18n ? WEi18n.t(ru) : en); }
+  function L(ru, en) { return window.WEi18n ? WEi18n.L(ru, en) : ru; }
   function pad(n) { return ('0' + n).slice(-2); }
 
   function where() {

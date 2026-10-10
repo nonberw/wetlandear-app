@@ -4,9 +4,9 @@
   var S = window.WEStore, A = window.WEApp;
   function $(s, r) { return (r || document).querySelector(s); }
   var esc = A.esc;
-  function lang() { return window.WEi18n && window.WEi18n.lang === 'en' ? 'en' : 'ru'; }
-  function L(ru, en) { return lang() === 'en' ? en : ru; }
-  var MON = { ru: ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'], en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] };
+  function lang() { return window.WEi18n ? window.WEi18n.lang : 'ru'; }
+  function L(ru, en) { return window.WEi18n ? WEi18n.L(ru, en) : ru; }
+  var MON = { ru: ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'], kk: ['қаң', 'ақп', 'нау', 'сәу', 'мам', 'мау', 'шіл', 'там', 'қыр', 'қаз', 'қар', 'жел'], en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] };
   function refresh() { A.refreshChrome(); A.show(A.current()); }
   function p2(n) { return ('0' + n).slice(-2); }
   function dm(ms) { var d = new Date(ms); return p2(d.getDate()) + '.' + p2(d.getMonth() + 1); }
@@ -30,7 +30,7 @@
       ev[y][t.getMonth()]++; if (d.status === 'confirmed' && d.species) sp[y][t.getMonth()][d.species] = 1;
     });
     years.forEach(function (y) { ev[y].forEach(function (n) { if (n > mx) mx = n; }); sp[y].forEach(function (o) { var n = Object.keys(o).length; if (n > mxs) mxs = n; }); });
-    var head = '<tr><th></th>' + MON[lang()].map(function (m) { return '<th>' + m + '</th>'; }).join('') + '</tr>';
+    var head = '<tr><th></th>' + ((MON[lang()] || MON.ru) || MON.ru).map(function (m) { return '<th>' + m + '</th>'; }).join('') + '</tr>';
     var t1 = '<table class="sz">' + head + years.map(function (y) { return '<tr><th>' + y + '</th>' + ev[y].map(function (n) { return '<td ' + shade(n, mx) + '>' + (n || '') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
     var t2 = '<table class="sz">' + head + years.map(function (y) { return '<tr><th>' + y + '</th>' + sp[y].map(function (o) { var n = Object.keys(o).length; return '<td ' + shade(n, mxs) + '>' + (n || '') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
     /* first arrival per species per year, confirmed observations only */
@@ -315,7 +315,7 @@
     if (!c) { c = document.createElement('div'); c.id = 'todoCard'; c.className = 'card todo'; var hero = pulse.querySelector('.hero'); hero.parentNode.insertBefore(c, hero.nextSibling); }
     if (!n) { c.hidden = true; } else {
       c.hidden = false;
-      c.innerHTML = '<div><b>' + esc(L('Ждут проверки: ' + n, 'Waiting for review: ' + n)) + '</b><p>' + esc(L('Прослушайте и подтвердите вид. Так журнал становится надёжным, а модель учится.', 'Listen and confirm the species. This makes the journal reliable and teaches the model.')) + '</p></div><button class="btn primary" data-go2="review">' + esc(L('Проверить', 'Review')) + '</button>';
+      c.innerHTML = '<div><b>' + esc(L('Ждут проверки', 'Waiting for review') + ': ' + n) + '</b><p>' + esc(L('Прослушайте и подтвердите вид. Так журнал становится надёжным, а модель учится.', 'Listen and confirm the species. This makes the journal reliable and teaches the model.')) + '</p></div><button class="btn primary" data-go2="review">' + esc(L('Проверить', 'Review')) + '</button>';
     }
     var demo = $('#demoOn'); if (demo) demo.hidden = has;   /* the demo button is only for an empty journal */
   }

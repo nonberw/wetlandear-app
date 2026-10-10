@@ -112,8 +112,8 @@
 
   /* ---------- morning report ---------- */
   var hrs = 24, lastText = '';
-  var MONTHS = { ru: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'], en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] };
-  function dayStr(ms) { var d = new Date(ms), l = window.WEi18n ? window.WEi18n.lang : 'ru'; return l === 'en' ? MONTHS.en[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() : d.getDate() + ' ' + MONTHS.ru[d.getMonth()] + ' ' + d.getFullYear(); }
+  var MONTHS = { ru: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'], kk: ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым', 'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан'], en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] };
+  function dayStr(ms) { var d = new Date(ms), l = window.WEi18n ? window.WEi18n.lang : 'ru'; if (l === 'kk') return d.getFullYear() + ' ' + MONTHS.kk[d.getMonth()] + ' ' + d.getDate(); return l === 'en' ? MONTHS.en[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() : d.getDate() + ' ' + MONTHS.ru[d.getMonth()] + ' ' + d.getFullYear(); }
   function buildReport() {
     var r = S.report(hrs), L = [], H = [], period = T(hrs === 24 ? 'за сутки' : 'за 7 дней'), nm = function (id) { return spName(id); };
     L.push('WetlandEar. ' + T('Утро в заповеднике') + ', ' + dayStr(r.to) + ' (' + period + ')');

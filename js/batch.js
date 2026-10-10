@@ -7,7 +7,7 @@
   function $(s, r) { return (r || document).querySelector(s); }
   var esc = A.esc;
   function lang() { return window.WEi18n ? window.WEi18n.lang : 'ru'; }
-  function L(ru, en) { return lang() === 'ru' ? ru : (window.WEi18n ? WEi18n.t(ru) : en); }
+  function L(ru, en) { return window.WEi18n ? WEi18n.L(ru, en) : ru; }
   var AUDIO = /\.(wav|mp3|m4a|ogg|flac|webm|aac)$/i, MAXSEC = 300, MAXWIN = 18, SNR = 14, TEACH_KEEP = 6;
   var queue = [], running = false, stopFlag = false, stats = { ok: 0, ev: 0, fail: 0, skip: 0 };
 

@@ -11,6 +11,7 @@
   var T = function (s, v) { return window.WEi18n ? window.WEi18n.t(s, v) : s; };
   var PLEN = { 'событие': ['event', 'events'], 'подтверждённый вид': ['confirmed species', 'confirmed species'], 'фрагменту': ['fragment', 'fragments'], 'образец': ['sample', 'samples'] };
   function plural(n, a, b, c) {
+    if (window.WEi18n && window.WEi18n.lang === 'kk') return T(a);
     if (window.WEi18n && window.WEi18n.lang === 'en' && PLEN[a]) return n === 1 ? PLEN[a][0] : PLEN[a][1]; var m = n % 10, h = n % 100; return (m === 1 && h !== 11) ? a : (m >= 2 && m <= 4 && (h < 10 || h >= 20)) ? b : c; }
   function spName(id) { return id ? S.nameOf(id) : null; }
   function toast(msg) {

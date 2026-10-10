@@ -399,3 +399,26 @@ tr[data-sp] { cursor: pointer; } tr[data-sp]:hover td { background: #F3F7FE; }
 .wxr em { grid-column: 2; font-style: normal; color: var(--soft); font-size: .76rem; }
 #weatherBody h3 { margin: 14px 0 6px; font-size: 1rem; } #weatherBody h4 { margin: 10px 0 2px; font-size: .86rem; color: var(--soft); }
 #weatherBody .seg { margin-bottom: 8px; }
+
+/* ---- v0.3 polish: calmer, lighter, more consistent ---- */
+:root { --line: #E1E8F5; --field: #CBD6EC; }
+.view:not(#v-pulse) > h1 { font-size: clamp(1.55rem, 4.6vw, 2.1rem); margin: 0 0 10px; letter-spacing: -.025em; }
+.view:not(#v-pulse) > .lead { font-size: .96rem; margin-bottom: 18px; }
+h2 { font-size: 1.08rem; font-weight: 700; }
+.card { border-radius: 20px; border-color: var(--line); margin: 14px 0; box-shadow: 0 1px 2px rgba(11, 27, 58, .04), 0 14px 34px -22px rgba(11, 27, 58, .22); }
+.btn { min-height: 44px; border: 1px solid var(--field); background: #fff; color: var(--ink); font-weight: 650; box-shadow: 0 1px 2px rgba(11, 27, 58, .05); }
+@media (hover: hover) { .btn:not(.primary):not(.no):hover { border-color: var(--blue); color: var(--blue); } .btn.primary:hover { background: var(--blue-hover); } }
+.btn.primary { border-color: var(--blue); color: #fff; box-shadow: 0 8px 18px -10px rgba(31, 91, 255, .75); }
+.btn.no { background: #fff; border-color: #EBC3C0; }
+.btn.sm { min-height: 38px; padding: 0 16px; font-size: .88rem; }
+input[type="text"], input[type="search"], input[type="date"], input[type="number"], input:not([type]), select {
+  min-height: 44px; border: 1px solid var(--field); border-radius: 12px; padding: 0 12px; background: #fff; max-width: 100%; }
+input:focus, select:focus { outline: 3px solid rgba(31, 91, 255, .25); outline-offset: 0; border-color: var(--blue); }
+.seg { background: #fff; border-color: var(--field); }
+.list li:last-child { border-bottom: 0; }
+.more-item, .org { border-color: var(--line); }
+.tbl th { font-weight: 650; }
+.card > h2:first-child { margin-top: 0; }
+@media (max-width: 760px) { .card { padding: 16px; border-radius: 18px; } main { padding-top: 14px; } .view:not(#v-pulse) > h1 { margin-bottom: 8px; } }
+.banner { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; font-size: .86rem; padding: 8px 12px; border-radius: 14px; margin-bottom: 10px; }
+.banner .link { font-weight: 700; white-space: nowrap; }
