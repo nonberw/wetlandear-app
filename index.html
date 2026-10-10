@@ -154,11 +154,11 @@
   </div>
 
   <div class="card" id="batchCard">
-    <h2>Пакетная загрузка</h2>
-    <p class="hint">Сотни файлов с карты памяти станции за раз: приложение обработает их по очереди и сохранит события в журнал. Вкладку нужно держать открытой.</p>
+    <h2>Пакетная загрузка и разметка архива</h2>
+    <p class="hint">Сотни файлов с карты памяти станции или целый архив за раз: приложение обработает их по очереди, сохранит события в журнал и даст таблицу «время, вид, уверенность». Пустые файлы отбрасываются, в журнал попадают только записи со звуками. Файлы длиннее 5 минут обрабатываются только в первых 5 минутах. Вкладку нужно держать открытой.</p>
     <div class="row wrap"><label class="btn">Выбрать файлы<input type="file" id="batchFiles" multiple accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm" hidden></label><label class="btn">Выбрать папку<input type="file" id="batchDir" webkitdirectory multiple hidden></label></div>
     <p class="hint">Хотите научить приложение голосу, которого нет в BirdNET, например кудрявому пеликану? <button class="link" data-go2="voices">Голоса и датасеты</button></p>
-    <div class="row wrap"><button class="btn primary" id="batchGo">Начать</button><button class="btn" id="batchStop" hidden>Остановить</button><button class="btn" id="batchClear">Очистить список</button></div>
+    <div class="row wrap"><button class="btn primary" id="batchGo">Начать</button><button class="btn" id="batchStop" hidden>Остановить</button><button class="btn" id="batchClear">Очистить список</button><button class="btn" id="batchCsv" hidden>Таблица результатов (CSV)</button></div>
     <div class="bprog"><i id="batchBar"></i></div>
     <p class="hint" id="batchSum"></p>
     <ul class="batch-list" id="batchList"></ul>

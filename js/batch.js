@@ -67,15 +67,15 @@
     return f.arrayBuffer().then(function (ab) {
       var copy = ab.slice(0);
       return D.decode(ab).then(function (samples) {
-        if (samples.length / D.SR > MAXSEC) samples = samples.subarray(0, MAXSEC * D.SR);
+        var cut = samples.length / D.SR > MAXSEC; if (cut) samples = samples.subarray(0, MAXSEC * D.SR);
         if (samples.length < 4096) throw new Error('short');
         return sleep(20).then(function () {
           var sp = D.spectrogram(samples), events = D.detect(sp, SNR).map(function (e) { e.status = 'auto'; e.species = null; return e; });
           var idx = window.WEIndices ? WEIndices.compute(sp) : null;
-          if (!events.length) return { events: [], samples: samples, dur: sp.dur, idx: idx };
+          if (!events.length) return { events: [], samples: samples, dur: sp.dur, idx: idx, cut: cut };
           var signed = window.WEIdentify && WEIdentify.canRun();
           var go = signed ? D.decode(copy, 48000).then(function (s48) { return identify(events, s48, sp.dur); }).catch(function (e) { if (e && e.auth) throw e; /* suggestions failed: keep the events without them */ }) : Promise.resolve();
-          return go.then(function () { return { events: events, samples: samples, dur: sp.dur, idx: idx }; });
+          return go.then(function () { return { events: events, samples: samples, dur: sp.dur, idx: idx, cut: cut }; });
         });
       });
     });
@@ -94,8 +94,25 @@
   function bestSounds(events, n) {
     return events.filter(function (e) { var g = e.sound && e.sound.groups; return !g || g.animal === undefined || g.animal >= .25; }).sort(function (a, b) { return b.snr - a.snr; }).slice(0, n || TEACH_KEEP);
   }
+  /* one row per event (or one "no events" row per silent file) for the archive table */
+  var results = [];
+  function rowsOf(f, a) {
+    var start = f.lastModified || Date.now(), nm = f.webkitRelativePath || f.name;
+    if (!a.events.length) { results.push([nm, new Date(start).toISOString(), Math.round(a.dur), '', '', '', '', '', '', 'no events' + (a.cut ? ' (first 5 min only)' : '')]); return; }
+    a.events.forEach(function (e) {
+      var g = e.suggest && e.suggest[0], g2 = e.suggest && e.suggest[1], k = e.sound && e.sound.groups;
+      results.push([nm, new Date(start + e.t0 * 1000).toISOString(), Math.round(a.dur), e.t0.toFixed(1), e.t1.toFixed(1), g ? (g.sci || '') : '', g ? (g.common || '') : '', g ? Math.round((g.conf || 0) * 100) : '', g2 ? (g2.common || g2.sci || '') + ' ' + Math.round((g2.conf || 0) * 100) + '%' : '', k && k.gun >= .35 ? 'possible gunshot' : k && k.engine >= .3 && k.animal < .5 ? 'engine noise' : 'sound event' + (a.cut ? ' (first 5 min only)' : '')]);
+    });
+  }
+  function csvOut() {
+    if (!results.length) { A.toast(L('Таблица пока пуста', 'The table is empty')); return; }
+    var head = ['file', 'time', 'file_seconds', 'event_start_s', 'event_end_s', 'species_scientific', 'species', 'confidence_percent', 'second_choice', 'note'];
+    var cell = function (v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + [head].concat(results).map(function (r) { return r.map(cell).join(','); }).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'wetlandear-archive-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
   function processFile(f) {
-    return analyse(f).then(function (a) { return { n: saveEvents(f, a.events, a.samples, a.dur, a.idx) }; });
+    return analyse(f).then(function (a) { rowsOf(f, a); return { n: saveEvents(f, a.events, a.samples, a.dur, a.idx), cut: a.cut }; });
   }
 
   /* ---------- queue and screen ---------- */
@@ -107,7 +124,7 @@
     $('#batchSum').textContent = queue.length ? L('Файлов: ' + queue.length + ' · готово: ' + done + ' · событий сохранено: ' + stats.ev + (stats.fail ? ' · ошибок: ' + stats.fail : ''), 'Files: ' + queue.length + ' · done: ' + done + ' · events saved: ' + stats.ev) : '';
     var ico = { wait: '·', run: '…', ok: '✓', fail: '✕', skip: '–' };
     box.innerHTML = queue.slice(-60).map(function (q) { return '<li class="' + q.state + '"><span>' + ico[q.state] + '</span> ' + esc(q.f.name) + (q.msg ? ' <em>' + esc(q.msg) + '</em>' : '') + '</li>'; }).join('');
-    $('#batchGo').disabled = running; $('#batchStop').hidden = !running;
+    $('#batchGo').disabled = running; $('#batchStop').hidden = !running; $('#batchCsv').hidden = !results.length;
   }
   function addFiles(list) {
     var arr = [].slice.call(list || []).filter(function (f) { return AUDIO.test(f.name) && f.size > 4000; });
@@ -131,7 +148,7 @@
       var q = queue.filter(function (x) { return x.state === 'wait'; })[0];
       if (!q || stopFlag) { running = false; render(); if (!q) A.toast(L('Пакет обработан. Событий сохранено: ', 'Batch finished. Events saved: ') + stats.ev); if (window.WESync && WESync.syncNow) WESync.syncNow(true); A.refreshChrome(); return; }
       q.state = 'run'; render();
-      processFile(q.f).then(function (r) { q.state = r.n ? 'ok' : 'skip'; q.msg = r.n ? '+' + r.n : L('событий нет', 'no events'); stats.ev += r.n; stats.ok++; })
+      processFile(q.f).then(function (r) { q.state = r.n ? 'ok' : 'skip'; q.msg = (r.n ? '+' + r.n : L('событий нет', 'no events')) + (r.cut ? ' · ' + L('только первые 5 минут', 'first 5 min only') : ''); stats.ev += r.n; stats.ok++; })
         .catch(function (e) { q.state = 'fail'; q.msg = e && e.auth ? L('нужен вход', 'sign in') : e && e.message === 'short' ? L('слишком короткий', 'too short') : L('не прочитан', 'unreadable'); stats.fail++; if (e && e.auth) stopFlag = true; })
         .then(function () { render(); return sleep(30); }).then(next);
     };
@@ -144,7 +161,8 @@
     $('#batchDir').addEventListener('change', function () { addFiles(this.files); this.value = ''; });
     $('#batchGo').addEventListener('click', start);
     $('#batchStop').addEventListener('click', function () { stopFlag = true; });
-    $('#batchClear').addEventListener('click', function () { if (running) return; queue = []; stats = { ok: 0, ev: 0, fail: 0, skip: 0 }; render(); });
+    $('#batchCsv').addEventListener('click', csvOut);
+    $('#batchClear').addEventListener('click', function () { if (running) return; queue = []; results = []; stats = { ok: 0, ev: 0, fail: 0, skip: 0 }; render(); });
     [].forEach.call(document.querySelectorAll('input[name="bmode"]'), function (r) { r.addEventListener('change', function () { $('#teachBox').hidden = mode() !== 'teach'; }); });
     render();
   }

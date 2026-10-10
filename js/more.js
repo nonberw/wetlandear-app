@@ -186,6 +186,48 @@
         return o;
       }).catch(function () { return null; });
   }
+  /* ---------- species passport: months, years, best samples to listen to, how well the model knows the species ---------- */
+  var actx = null, sizes = null;
+  function modelSize(sci) {
+    if (sizes) return Promise.resolve(sizes[sci]);
+    return fetch('models/data_size.json').then(function (r) { return r.json(); }).catch(function () { return {}; }).then(function (j) { sizes = j; return j[sci]; });
+  }
+  function playDet(id) {
+    S.getClip(id).then(function (i16) {
+      if (!i16) { A.toast(L('Для этого события нет аудиоклипа', 'This event has no audio clip')); return; }
+      var f = new Float32Array(i16.length), i; for (i = 0; i < f.length; i++) f[i] = i16[i] / 32768;
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume();
+      var b = actx.createBuffer(1, f.length, 22050); b.getChannelData(0).set(f);
+      var src = actx.createBufferSource(); src.buffer = b; src.connect(actx.destination); src.start();
+    });
+  }
+  function passportExtra(m, id, dets, sciName) {
+    var box = $('#spMine', m); if (!box || !dets.length) return;
+    var mon = new Array(12).fill(0), yrs = {}, mm = 1;
+    dets.forEach(function (d) { var t = new Date(d.ts); mon[t.getMonth()]++; var y = yrs[t.getFullYear()] = yrs[t.getFullYear()] || { n: 0, a: +t, b: +t }; y.n++; if (+t < y.a) y.a = +t; if (+t > y.b) y.b = +t; });
+    mon.forEach(function (n) { if (n > mm) mm = n; });
+    var ML = (MON[lang()] || MON.ru);
+    var months = '<h3>' + esc(L('По месяцам', 'By month')) + '</h3><div class="hours" style="height:54px">' + mon.map(function (n, k) { return '<i style="--h:' + Math.round(n / mm * 100) + '%" title="' + ML[k] + ' · ' + n + '"></i>'; }).join('') + '</div><div class="hours-ax mon-ax">' + [0, 3, 6, 9, 11].map(function (k) { return '<span>' + ML[k] + '</span>'; }).join('') + '</div>';
+    var ys = Object.keys(yrs).sort().reverse().map(function (y) { return '<tr><td>' + y + '</td><td>' + dm(yrs[y].a) + ' – ' + dm(yrs[y].b) + '</td><td>' + yrs[y].n + '</td></tr>'; }).join('');
+    var years = '<h3>' + esc(L('По годам', 'By year')) + '</h3><table class="tbl"><thead><tr><th>' + esc(L('Год', 'Year')) + '</th><th>' + esc(L('Первая – последняя встреча', 'First – last record')) + '</th><th>' + esc(L('Событий', 'Events')) + '</th></tr></thead><tbody>' + ys + '</tbody></table>';
+    var best = dets.filter(function (d) { return d.clip; }).sort(function (a, b) {
+      var ca = a.suggest && a.suggest.conf || 0, cb = b.suggest && b.suggest.conf || 0; return (cb - ca) || (b.snr - a.snr);
+    }).slice(0, 3);
+    var play = best.length ? '<h3>' + esc(L('Лучшие образцы голоса', 'Best samples of the voice')) + '</h3><div class="samples">' + best.map(function (d) {
+      var t = new Date(d.ts); return '<button class="btn" data-play="' + esc(d.id) + '">▶ ' + dm(+t) + '.' + t.getFullYear() + ' · ' + esc(d.station || '–') + (d.suggest && d.suggest.conf ? ' · ' + Math.round(d.suggest.conf * 100) + '%' : '') + '</button>'; }).join('') + '</div>' : '';
+    var ind = '<p class="sp-ind"><button class="btn" id="spInd"></button></p>';
+    var know = '<p class="hint" id="spKnow"></p>';
+    box.insertAdjacentHTML('beforeend', months + years + play + know + ind);
+    box.addEventListener('click', function (e) { var b = e.target.closest('[data-play]'); if (b) playDet(b.getAttribute('data-play')); });
+    var key = 'we.indicators', get = function () { try { return JSON.parse(localStorage.getItem(key)) || []; } catch (x) { return []; } };
+    var upd = function () { $('#spInd', m).textContent = get().indexOf(id) >= 0 ? L('Убрать из индикаторных видов', 'Remove from indicator species') : L('Сделать индикаторным видом', 'Make an indicator species'); };
+    upd(); $('#spInd', m).addEventListener('click', function () { var l = get(), i = l.indexOf(id); if (i >= 0) l.splice(i, 1); else if (l.length < 20) l.push(id); else { A.toast(L('Не больше 20 видов', 'No more than 20 species')); return; } try { localStorage.setItem(key, JSON.stringify(l)); } catch (x) { } upd(); if (window.WEScience && A.current() === 'science') WEScience.render(); });
+    if (sciName) modelSize(sciName).then(function (n) {
+      var el = $('#spKnow', m); if (!el) return;
+      if (n == null) el.textContent = L('Модель WetlandEar этот вид специально не обучала: опирается на BirdNET.', 'The WetlandEar model was not trained on this species: it relies on BirdNET.');
+      else el.textContent = L('Модель WetlandEar обучена на записях этого вида: ', 'The WetlandEar model was trained on recordings of this species: ') + n + (n < 15 ? L('. Это мало, поэтому проверяйте её ответы внимательнее.', '. That is few, so check its answers more carefully.') : '.');
+    });
+  }
   function closeCard() { var m = $('#spModal'); if (m) m.remove(); document.removeEventListener('keydown', escClose); }
   function escClose(e) { if (e.key === 'Escape') closeCard(); }
   function speciesCard(id) {
@@ -205,6 +247,7 @@
       '<p>' + esc(L('Станции', 'Stations')) + ': ' + Object.keys(stn).map(function (k) { return esc(k) + ' (' + stn[k] + ')'; }).join(', ') + '</p>' +
       '<div class="hours" style="height:54px">' + hrs.map(function (n, k) { return '<i style="--h:' + Math.round(n / hm * 100) + '%" title="' + p2(k) + ':00 · ' + n + '"></i>'; }).join('') + '</div><div class="hours-ax"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>' : '<p class="hint">' + esc(L('Подтверждённых наблюдений этого вида пока нет.', 'No confirmed records of this species yet.')) + '</p>';
     $('#spMine', m).innerHTML = mine;
+    passportExtra(m, id, dets, sci);
     var lng = lang(), titles = [sci, en].filter(Boolean);
     var tryT = function (i) { if (i >= titles.length) return Promise.resolve(null); return wiki(lng, titles[i]).then(function (r) { return r || (lng === 'ru' ? wiki('en', titles[i]) : null) || null; }).then(function (r) { return r || tryT(i + 1); }); };
     tryT(0).then(function (r) {

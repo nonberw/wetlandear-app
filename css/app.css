@@ -560,3 +560,7 @@ body.qs-lock { overflow: hidden; }
 .stn-f label.wide { grid-column: 1 / -1; }
 .stn-f input { min-height: 40px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 12px; background: var(--bg); color: var(--ink); font-weight: 400; font-size: .92rem; }
 @media (max-width: 520px) { .stn-f { grid-template-columns: 1fr; } }
+.samples { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.samples .btn { min-height: 40px; padding: 0 14px; font-size: .86rem; }
+.sp-ind { margin-top: 10px; }
+.sp-mine .tbl { margin: 4px 0 10px; }
