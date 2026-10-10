@@ -386,5 +386,21 @@
  "Мгновенные тревоги: вкл": "Instant alerts: on",
  "Экспорт для науки": "Export for science",
  "Подтверждённые человеком наблюдения в форматах, которые понимают GBIF (Darwin Core) и eBird. Видам без латинского названия файл не включает. Файл создаётся на вашем устройстве.": "Observations confirmed by a person in formats that GBIF (Darwin Core) and eBird understand. Species without a scientific name are left out. The file is created on your device.",
- "Округлить координаты до 0,1° (около 10 км): так принято для редких видов": "Round coordinates to 0.1° (about 10 km): common practice for rare species"
+ "Округлить координаты до 0,1° (около 10 км): так принято для редких видов": "Round coordinates to 0.1° (about 10 km): common practice for rare species",
+ "Главная": "Home",
+ "Ещё": "More",
+ "Записать звук": "Record sound",
+ "Дополнительно": "Advanced",
+ "Станция и данные": "Station and data",
+ "Название и координаты станции, выгрузка журнала, экспорт для GBIF и eBird": "Station name and coordinates, journal export, export for GBIF and eBird",
+ "Отчёты": "Reports",
+ "Утренний отчёт и PDF для заповедника": "Morning report and PDF for the reserve",
+ "Профиль и подключения": "Profile and connections",
+ "Аккаунт, Telegram, команда, ИИ-ассистенты": "Account, Telegram, team, AI assistants",
+ "Точность модели": "Model accuracy",
+ "Честные цифры: насколько модель точнее BirdNET": "Honest numbers: how much more accurate the model is than BirdNET",
+ "Сайт проекта": "Project website",
+ "Конфиденциальность": "Privacy",
+ "Какие данные мы храним и зачем": "What data we keep and why",
+ "WetlandEar App · версия 0.2 · прототип": "WetlandEar App · version 0.2 · prototype"
 }); })();

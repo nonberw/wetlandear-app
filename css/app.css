@@ -356,3 +356,32 @@ tr[data-sp] { cursor: pointer; } tr[data-sp]:hover td { background: #F3F7FE; }
 .sp-text { font-size: .92rem; line-height: 1.5; } .sp-text a { margin-left: 4px; }
 .audit { list-style: none; margin: 8px 0; padding: 0; font-size: .86rem; } .audit li { padding: 6px 0; border-bottom: 1px solid #E3ECFA; } .audit .t { font-family: var(--mono); color: var(--soft); font-size: .76rem; }
 .chk { display: flex; gap: 8px; align-items: flex-start; font-size: .88rem; margin: 8px 0; }
+
+/* ---- simpler navigation (v0.2) ---- */
+[hidden] { display: none !important; }
+.tabs { margin-left: 16px; }
+.top .lang { margin-left: auto; }
+.subnav { display: flex; width: 100%; max-width: 440px; margin: 0 0 18px; }
+.subnav button { flex: 1; padding: 0 10px; white-space: nowrap; }
+.back-more { display: inline-block; margin: 0 0 8px; padding: 6px 0; font-weight: 700; color: var(--blue); }
+.more-list { display: grid; gap: 10px; max-width: 640px; }
+.more-item { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left; width: 100%; padding: 16px 18px; border: 1px solid var(--line); border-radius: 18px; background: #fff; color: var(--ink); text-decoration: none; font: inherit; cursor: pointer; transition: transform .15s var(--ease), box-shadow .2s; }
+.more-item b { font-size: 1.02rem; }
+.more-item span { color: var(--soft); font-size: .88rem; }
+.more-item:active { transform: scale(.985); }
+@media (hover: hover) { .more-item:hover { box-shadow: 0 6px 20px rgba(31, 91, 255, .10); } }
+.more-ver { margin-top: 18px; }
+.todo { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--sky); border-color: #BFD0FA; }
+.todo p { margin: 2px 0 0; color: var(--soft); font-size: .9rem; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary h2 { margin: 0; }
+.fold > summary::after { content: '+'; font: 700 1.3rem var(--font); color: var(--blue); }
+.fold[open] > summary::after { content: '−'; }
+.fold[open] > summary { margin-bottom: 10px; }
+.sens-fold { margin-top: 6px; } .sens-fold summary { cursor: pointer; color: var(--soft); font-size: .86rem; }
+@media (max-width: 760px) { .tabs button { min-width: 0; flex: 1; } .top .lang { margin-left: auto; } .todo { flex-direction: column; align-items: stretch; text-align: center; } }
+/* the blur on the header made the fixed bottom bar attach to the header instead of the screen */
+@media (max-width: 760px) { .top { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg); } }
+.auth .btn.sm { white-space: nowrap; min-height: 40px; border-radius: 99px; }
+@media (max-width: 760px) { #signBanner span { font-size: .85rem; } .banner { padding: 8px 12px; } .top { gap: 10px; } }

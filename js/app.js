@@ -44,7 +44,7 @@
     if (!$('#v-' + view)) view = 'pulse';
     current = view;
     $$('.view').forEach(function (v) { v.classList.toggle('on', v.id === 'v-' + view); });
-    $$('.tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.view === view); });
+    $$('.tabs button').forEach(function (b) { b.classList.toggle('on', (b.dataset.group || b.dataset.view).split(',').indexOf(view) >= 0); });
     if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
     window.scrollTo(0, 0);
     if (view === 'pulse') renderPulse();
@@ -524,7 +524,7 @@
     if (!window.WESync || !WESync.ready()) { box.innerHTML = ''; return; }
     box.innerHTML = me
       ? '<button class="me" id="meBtn" aria-label="Профиль">' + avatarHtml(me, 'av') + '<span class="mn">' + esc(me.name.split(' ')[0]) + '</span></button>'
-      : '<button class="btn primary sm" id="signInBtn">Войти через Google</button>';
+      : '<button class="btn primary sm" id="signInBtn">Войти</button>';
     var b = $('#meBtn'); if (b) b.addEventListener('click', function () { show('profile'); });
     var s = $('#signInBtn'); if (s) s.addEventListener('click', doSignIn);
     refreshChrome();

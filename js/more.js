@@ -286,12 +286,50 @@
   }
   initExport(); initAudit();
 
+  /* ---------- simpler navigation: sub-tabs of the Journal, "More" menu, back links, what to do next ---------- */
+  var SUB = { log: ['log', 'calendar', 'map'] };
+  function subLabel(v) { return { log: L('События', 'Events'), calendar: L('Календарь и сезоны', 'Calendar'), map: L('Карта', 'Map') }[v]; }
+  function initNav() {
+    ['log', 'calendar', 'map'].forEach(function (v) {
+      var sec = document.getElementById('v-' + v); if (!sec || sec.querySelector('.subnav')) return;
+      var bar = document.createElement('div'); bar.className = 'subnav seg'; bar.setAttribute('role', 'tablist');
+      bar.innerHTML = ['log', 'calendar', 'map'].map(function (t) { return '<button role="tab" data-go2="' + t + '" data-sub="' + t + '">' + esc(subLabel(t)) + '</button>'; }).join('');
+      sec.insertBefore(bar, sec.firstChild);
+    });
+    ['data', 'report', 'profile'].forEach(function (v) {
+      var sec = document.getElementById('v-' + v); if (!sec || sec.querySelector('.back-more')) return;
+      var b = document.createElement('button'); b.className = 'link back-more no-print'; b.setAttribute('data-go2', 'more'); b.textContent = '← ' + L('Ещё', 'More');
+      sec.insertBefore(b, sec.firstChild);
+    });
+    document.addEventListener('click', function (e) { var el = e.target.closest('[data-go2]'); if (el) { e.preventDefault(); A.show(el.getAttribute('data-go2')); } });
+  }
+  function syncNav(v) {
+    [].forEach.call(document.querySelectorAll('.subnav button'), function (b) { var on = b.getAttribute('data-sub') === v; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); b.textContent = subLabel(b.getAttribute('data-sub')); });
+    [].forEach.call(document.querySelectorAll('.back-more'), function (b) { b.textContent = '← ' + L('Ещё', 'More'); });
+  }
+  function todoCard() {
+    var pulse = $('#v-pulse'); if (!pulse) return;
+    var n = S.get().dets.filter(function (d) { return d.status === 'auto' && !d.demo; }).length;
+    var has = S.get().dets.length > 0;
+    var c = $('#todoCard');
+    if (!c) { c = document.createElement('div'); c.id = 'todoCard'; c.className = 'card todo'; var hero = pulse.querySelector('.hero'); hero.parentNode.insertBefore(c, hero.nextSibling); }
+    if (!n) { c.hidden = true; } else {
+      c.hidden = false;
+      c.innerHTML = '<div><b>' + esc(L('Ждут проверки: ' + n, 'Waiting for review: ' + n)) + '</b><p>' + esc(L('Прослушайте и подтвердите вид. Так журнал становится надёжным, а модель учится.', 'Listen and confirm the species. This makes the journal reliable and teaches the model.')) + '</p></div><button class="btn primary" data-go2="review">' + esc(L('Проверить', 'Review')) + '</button>';
+    }
+    var demo = $('#demoOn'); if (demo) demo.hidden = has;   /* the demo button is only for an empty journal */
+  }
+
   var prev = window.WEX && window.WEX.onShow;
   if (window.WEX) window.WEX.onShow = function (v) {
     if (prev) prev(v);
+    syncNav(v);
+    if (v === 'pulse') todoCard();
     if (v === 'calendar') renderSeasons();
     if (v === 'profile') renderTeam();
   };
-  initPdf();
+  initPdf(); initNav();
+  var prevAP = window.WEX && window.WEX.afterPulse;
+  if (window.WEX) window.WEX.afterPulse = function () { if (prevAP) prevAP(); todoCard(); };
   window.WEMore = { renderSeasons: renderSeasons, renderTeam: renderTeam };
 })();
