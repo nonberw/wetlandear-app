@@ -385,3 +385,17 @@ tr[data-sp] { cursor: pointer; } tr[data-sp]:hover td { background: #F3F7FE; }
 @media (max-width: 760px) { .top { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg); } }
 .auth .btn.sm { white-space: nowrap; min-height: 40px; border-radius: 99px; }
 @media (max-width: 760px) { #signBanner span { font-size: .85rem; } .banner { padding: 8px 12px; } .top { gap: 10px; } }
+
+/* batch upload, watchlist, weather */
+.bprog { height: 8px; border-radius: 99px; background: #E3ECFA; overflow: hidden; margin: 12px 0 6px; }
+.bprog i { display: block; height: 100%; width: var(--w, 0%); background: var(--blue); transition: width .3s var(--ease); }
+.batch-list { list-style: none; margin: 6px 0 0; padding: 0; max-height: 260px; overflow: auto; font-size: .82rem; }
+.batch-list li { padding: 3px 0; color: var(--soft); border-bottom: 1px solid #EEF3FC; word-break: break-all; } .batch-list li.ok { color: var(--ink); } .batch-list li.fail { color: var(--bad); } .batch-list em { font-style: normal; color: var(--soft); margin-left: 6px; }
+#teachBox { margin: 6px 0 10px; } #teachBox input, #watchBody input { width: 100%; max-width: 420px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; } .chip.wl { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; background: var(--sky); border-radius: 99px; font-size: .86rem; }
+.chip.wl button { border: 0; background: #fff; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; line-height: 1; }
+.wxb { display: grid; gap: 6px; margin: 4px 0 12px; } .wxr { display: grid; grid-template-columns: 78px 1fr; gap: 4px 10px; align-items: center; font-size: .84rem; }
+.wxr .b { height: 12px; border-radius: 99px; background: #EEF3FC; overflow: hidden; } .wxr .b i { display: block; height: 100%; width: var(--w); background: #6F97FF; border-radius: 99px; }
+.wxr em { grid-column: 2; font-style: normal; color: var(--soft); font-size: .76rem; }
+#weatherBody h3 { margin: 14px 0 6px; font-size: 1rem; } #weatherBody h4 { margin: 10px 0 2px; font-size: .86rem; color: var(--soft); }
+#weatherBody .seg { margin-bottom: 8px; }

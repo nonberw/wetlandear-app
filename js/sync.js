@@ -66,11 +66,16 @@
     return sb.from('detections').upsert(detRow(d)).then(check).then(function () { maybeAlert([d]); }).catch(function () { });
   }
   /* instant Telegram alert for a fresh possible gunshot or engine noise; the server re-checks everything */
+  function matchesWatch(d) {
+    var w = window.WE_WATCH || []; if (!w.length) return false;
+    if (d.species && w.indexOf(d.species) >= 0) return true;
+    var g = d.suggest; return !!(g && g.conf >= .35 && w.indexOf(S.sugId(g)) >= 0);
+  }
   function alertedIds() { try { return JSON.parse(localStorage.getItem('we.alerted') || '[]'); } catch (e) { return []; } }
   function maybeAlert(dets) {
     if (!user || !session) return;
     var done = alertedIds(), now = Date.now();
-    var ids = dets.filter(function (d) { return !d.demo && d.status !== 'rejected' && (!d.uid || d.uid === user.id) && S.threatOf(d) && now - new Date(d.ts) < 3 * 36e5 && done.indexOf(d.id) < 0; }).map(function (d) { return d.id; }).slice(0, 20);
+    var ids = dets.filter(function (d) { return !d.demo && d.status !== 'rejected' && (!d.uid || d.uid === user.id) && (S.threatOf(d) || matchesWatch(d)) && now - new Date(d.ts) < 3 * 36e5 && done.indexOf(d.id) < 0; }).map(function (d) { return d.id; }).slice(0, 20);
     if (!ids.length) return;
     fetch('/api/alert', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ids }) }).then(function (r) {
       if (r.ok) try { localStorage.setItem('we.alerted', JSON.stringify(done.concat(ids).slice(-300))); } catch (e) { }
@@ -118,7 +123,7 @@
 
   /* ---------- Telegram morning report ---------- */
   function tgGet() {
-    return sb.from('telegram_links').select('chat_id,enabled,lang,code,alerts').eq('user_id', user.id).maybeSingle().then(function (r) {
+    return sb.from('telegram_links').select('chat_id,enabled,lang,code,alerts,watch').eq('user_id', user.id).maybeSingle().then(function (r) {
       if (!r.error) return r.data;
       return sb.from('telegram_links').select('chat_id,enabled,lang,code').eq('user_id', user.id).maybeSingle().then(function (r2) { if (r2.error) throw r2.error; return r2.data; });   /* database update not applied yet */
     });
@@ -162,7 +167,15 @@
 
   function reviewLog() { return sb.from('review_log').select('*').order('at', { ascending: false }).limit(150).then(function (r) { if (r.error) throw r.error; return r.data; }); }
 
+  /* training samples shared with the project: fingerprints only */
+  function shareSamples(rows) {
+    var p = Promise.resolve();
+    chunks(rows, 150).forEach(function (c) { p = p.then(function () { return sb.from('training_shares').upsert(c, { onConflict: 'user_id,det_id', ignoreDuplicates: true }).then(check); }); });
+    return p;
+  }
+
   window.WESync = {
+    shareSamples: shareSamples,
     reviewLog: reviewLog,
     orgList: orgList, orgPeople: orgPeople, orgCreate: orgCreate, orgJoin: orgJoin, orgRole: orgRole, orgRemove: orgRemove, orgCode: orgCode, orgDelete: orgDelete,
     keyList: keyList, keyCreate: keyCreate, keyRemove: keyRemove,

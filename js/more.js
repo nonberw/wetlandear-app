@@ -332,4 +332,5 @@
   var prevAP = window.WEX && window.WEX.afterPulse;
   if (window.WEX) window.WEX.afterPulse = function () { if (prevAP) prevAP(); todoCard(); };
   window.WEMore = { renderSeasons: renderSeasons, renderTeam: renderTeam };
+  (function () { var cur = A.current(); syncNav(cur); if (cur === 'pulse') todoCard(); if (cur === 'calendar') renderSeasons(); if (cur === 'profile') renderTeam(); })();
 })();

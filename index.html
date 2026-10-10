@@ -110,6 +110,22 @@
     <div class="status" id="status" role="status" aria-live="polite"></div>
   </div>
 
+  <div class="card" id="batchCard">
+    <h2>Пакетная загрузка</h2>
+    <p class="hint">Сотни файлов с карты памяти станции за раз: приложение обработает их по очереди и сохранит события в журнал. Вкладку нужно держать открытой.</p>
+    <div class="row wrap"><label class="btn">Выбрать файлы<input type="file" id="batchFiles" multiple accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm" hidden></label><label class="btn">Выбрать папку<input type="file" id="batchDir" webkitdirectory multiple hidden></label></div>
+    <label class="chk"><input type="radio" name="bmode" value="auto" checked> <span>Найти события и подсказать виды</span></label>
+    <label class="chk"><input type="radio" name="bmode" value="teach"> <span>Научить голосу: на всех этих файлах поёт один вид</span></label>
+    <div id="teachBox" hidden>
+      <p class="hint">Для вида, которого нет в BirdNET, например кудрявого пеликана. Загрузите 5–10 записей, где слышен только он: найденные звуки сохранятся как ваши образцы, и приложение начнёт узнавать этот голос.</p>
+      <input id="teachSpecies" list="speciesList" autocomplete="off" placeholder="Вид, например Кудрявый пеликан">
+    </div>
+    <div class="row wrap"><button class="btn primary" id="batchGo">Начать</button><button class="btn" id="batchStop" hidden>Остановить</button><button class="btn" id="batchClear">Очистить список</button></div>
+    <div class="bprog"><i id="batchBar"></i></div>
+    <p class="hint" id="batchSum"></p>
+    <ul class="batch-list" id="batchList"></ul>
+  </div>
+
   <div id="result" hidden>
     <div class="card">
       <div class="res-head">
@@ -178,6 +194,7 @@
     <p class="hint" id="dayInfo">Нажмите на день, чтобы увидеть подробности.</p>
   </div>
   <div class="card" id="seasonsCard" hidden></div>
+  <div class="card" id="weatherCard"><h2>Погода и активность</h2><div id="weatherBody"></div></div>
   <div class="card">
     <div class="res-head"><h2>Первые обнаружения сезона</h2><button class="link" data-go="log">Весь журнал</button></div>
     <div class="tbl-wrap"><table class="tbl" id="season"><thead><tr><th>Вид</th><th>Впервые</th><th>Последний раз</th><th>Событий</th></tr></thead><tbody></tbody></table></div>
@@ -281,6 +298,11 @@
       <p class="hint">Каждое утро в 07:00 по Астане бот пришлёт короткий отчёт: кто пел, новые виды, тревоги, молчащие станции.</p>
       <div id="tgBody"></div>
     </div>
+    <div class="card" id="watchCard">
+      <h2>Список наблюдения</h2>
+      <p class="hint">Выберите виды, которых вы ждёте, например кудрявого пеликана. Как только приложение найдёт такой голос, бот сразу напишет вам в Telegram.</p>
+      <div id="watchBody"></div>
+    </div>
     <div class="card" id="teamCard">
       <h2>Команда</h2>
       <p class="hint">Общий журнал для заповедника или группы: участники видят события, записи и аудио друг друга. Владелец управляет людьми, редактор проверяет события, наблюдатель только смотрит.</p>
@@ -311,6 +333,11 @@
       <label>Долгота<input id="stLon" type="text" inputmode="decimal" placeholder="69.00"></label>
     </div>
     <div class="row"><button class="btn" id="geoBtn">Определить место</button><button class="btn primary" id="stSave">Сохранить</button><span class="hint" id="stMsg"></span></div>
+  </div>
+  <div class="card" id="shareCard">
+    <h2>Помочь обучить модель</h2>
+    <p class="hint">Передайте проекту образцы звука из событий, которые вы подтвердили. Аудио не передаётся: только цифровой отпечаток звука (1024 числа), вид и округлённое место. Так заповедники вместе делают модель точнее.</p>
+    <div id="shareBody"></div>
   </div>
   <div class="card" id="exCard">
     <h2>Экспорт для науки</h2>
@@ -375,6 +402,10 @@
 <script src="js/app.js"></script>
 <script src="js/extras.js"></script>
 <script src="js/more.js"></script>
+<script src="js/batch.js"></script>
+<script src="js/watch.js"></script>
+<script src="js/weather.js"></script>
+<datalist id="speciesList"></datalist>
 <div id="pdfPaper" aria-hidden="true"></div>
 </body>
 </html>

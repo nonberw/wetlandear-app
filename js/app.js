@@ -622,5 +622,5 @@
   /* ---------- start ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () { });
   show((location.hash || '#pulse').slice(1));
-  window.WEApp = { analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, refreshChrome: refreshChrome, speciesOptions: speciesOptions, sndHtml: sndHtml, current: function () { return current; } };
+  window.WEApp = { core: { eventCenters: eventCenters, aggregate: aggregate, b64: b64 }, analyze: analyze, show: show, toast: toast, esc: esc, fmtDT: fmtDT, fmtD: fmtD, spName: spName, plural: plural, lvlBadge: lvlBadge, refreshChrome: refreshChrome, speciesOptions: speciesOptions, sndHtml: sndHtml, current: function () { return current; } };
 })();
