@@ -71,7 +71,7 @@
   function stop() { playing.stop(); }
   function chunks(text) {
     var parts = String(text).replace(/\s+/g, ' ').match(/[^.!?…]+[.!?…]*/g) || [text], out = [], cur = '';
-    parts.forEach(function (s) { if ((cur + s).length > 160 && cur) { out.push(cur); cur = s; } else cur += s; });
+    parts.forEach(function (s) { if (cur && (cur.length >= 20 || (cur + s).length > 160)) { out.push(cur); cur = s; } else cur += s; });
     if (cur.trim()) out.push(cur);
     return out.map(function (s) { return s.trim(); }).filter(Boolean);
   }
