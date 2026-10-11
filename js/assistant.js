@@ -116,7 +116,21 @@
   var talking = false, lastSaid = '';
   function say(text, quiet) {
     lastSaid = text; show(text, 'bot');
-    if (quiet || store('we.voice.mute') === '1' || !window.speechSynthesis) return;
+    if (quiet || store('we.voice.mute') === '1') return;
+    var pid = piperChoice();
+    if (pid) {   /* downloaded neural voice (js/piper.js); on any trouble fall back to the system voice */
+      talking = true; var free = function () { setTimeout(function () { talking = false; }, 500); };
+      WEPiper.speak(pid, text).then(free, function (e) { free(); store('we.voice.piper.' + lang(), ''); show(L('Живой голос не заработал, включён обычный. ', 'The neural voice failed, using the normal one. ', 'Жанды дауыс қосылмады, қарапайым дауыс қосылды. ') + (e && e.message || ''), 'bot'); fillPiper(); speakSystem(text); });
+      return;
+    }
+    speakSystem(text);
+  }
+  function piperChoice() {
+    var id = window.WEPiper && WEPiper.supported() ? store('we.voice.piper.' + lang()) : '';
+    var v = id && WEPiper.byId(id); return v && v.lang === lang() ? id : '';
+  }
+  function speakSystem(text) {
+    if (!window.speechSynthesis) return;
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text), v = chosenVoice(); u.lang = v ? v.lang : locale(); if (v) u.voice = v; u.rate = .97; u.pitch = 1;
@@ -146,6 +160,33 @@
     var list = voiceList(), want = store('we.voice.name.' + lang());
     for (var i = 0; i < list.length; i++) if (list[i].name === want) return list[i];
     return list[0] || null;
+  }
+  /* neural voices: pick one, it downloads once (28 to 128 MB) and then works offline */
+  function fillPiper() {
+    var sel = $('#vaPk'), box = $('#vaPkBox'); if (!sel || !box) return;
+    if (!window.WEPiper || !WEPiper.supported()) { box.hidden = true; return; }
+    var list = WEPiper.forLang(lang()), cur = store('we.voice.piper.' + lang()) || '';
+    box.hidden = !list.length; if (!list.length) return;
+    Promise.all(list.map(function (v) { return WEPiper.has(v.id); })).then(function (have) {
+      var any = have.some(Boolean), del = $('#vaPkDel'); if (del) del.hidden = !any;
+      var k = lang() === 'en' ? 1 : lang() === 'kk' ? 2 : 0;
+      sel.innerHTML = '<option value="">' + esc(L('Системный голос', 'System voice', 'Жүйелік дауыс')) + '</option>' + list.map(function (v, i) {
+        return '<option value="' + v.id + '"' + (v.id === cur ? ' selected' : '') + '>' + esc(L('Живой: ', 'Neural: ', 'Жанды: ') + v.name[k] + (have[i] ? ' ✓' : ' (' + v.mb + ' ' + L('МБ', 'MB', 'МБ') + ')')) + '</option>';
+      }).join('');
+    });
+  }
+  function pickPiper(id) {
+    var sel = $('#vaPk'), bar = $('#vaPkBar'), msg = $('#vaPkMsg'), l = lang();
+    if (!id) { store('we.voice.piper.' + l, ''); fillPiper(); say(L('Включён системный голос.', 'The system voice is on.', 'Жүйелік дауыс қосылды.')); return; }
+    WEPiper.has(id).then(function (have) {
+      var done = function () { store('we.voice.piper.' + l, id); fillPiper(); say(L('Здравствуйте! Я помощник рейнджера. Так звучит живой голос.', 'Hello! I am the ranger assistant. This is the neural voice.', 'Сәлеметсіз бе! Мен рейнджер көмекшісімін. Жанды дауыс осылай естіледі.')); };
+      if (have) return done();
+      var v = WEPiper.byId(id), mb = v.mb + WEPiper.engineMB;
+      sel.disabled = true; bar.hidden = false; bar.value = 0;
+      msg.textContent = L('Скачиваю голос, ' + mb + ' МБ, один раз. Дальше он работает без интернета.', 'Downloading the voice, ' + mb + ' MB, once. After that it works offline.', 'Дауыс жүктелуде, ' + mb + ' МБ, бір рет. Кейін интернетсіз жұмыс істейді.');
+      WEPiper.download(id, function (p) { bar.value = p; }).then(function () { msg.textContent = ''; bar.hidden = true; sel.disabled = false; done(); },
+        function (e) { msg.textContent = L('Не удалось скачать голос: ', 'Could not download the voice: ', 'Дауысты жүктеу мүмкін болмады: ') + (e && e.message || ''); bar.hidden = true; sel.disabled = false; fillPiper(); });
+    });
   }
   function fillVoices() {
     var sel = $('#vaVoiceSel'); if (!sel) return;
@@ -213,7 +254,7 @@
     rec.onend = function () { if (on) { if (errCount > 6) { on = false; setBtn(); show(L('Распознавание речи не отвечает. Включите снова или введите команду.', 'Speech input is not responding. Turn it on again or type.'), 'bot'); return; } clearTimeout(restartT); restartT = setTimeout(listen, 300); } };
     try { rec.start(); } catch (e) { errCount++; }
   }
-  function off() { on = false; clearTimeout(restartT); try { if (rec) rec.abort(); } catch (e) { } try { speechSynthesis && speechSynthesis.cancel(); } catch (e) { } setBtn(); }
+  function off() { on = false; clearTimeout(restartT); try { if (rec) rec.abort(); } catch (e) { } try { speechSynthesis && speechSynthesis.cancel(); } catch (e) { } if (window.WEPiper) WEPiper.stop(); setBtn(); }
   function build() {
     var btn = document.createElement('button'); btn.id = 'vaBtn'; btn.className = 'va-btn'; btn.type = 'button'; btn.setAttribute('aria-pressed', 'false'); btn.setAttribute('aria-label', L('Голосовой помощник', 'Voice assistant')); btn.title = L('Голосовой помощник', 'Voice assistant');
     btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
@@ -223,17 +264,22 @@
       '<div id="vaLog" class="va-log" aria-live="polite"></div>' +
       '<form id="vaForm" class="va-form"><input id="vaIn" type="text" autocomplete="off" placeholder="' + esc(L('или введите команду', 'or type a command')) + '" aria-label="' + esc(L('Команда', 'Command')) + '"><button class="btn" type="submit">' + esc(L('Выполнить', 'Run')) + '</button></form>' +
       '<label class="va-mute"><input type="checkbox" id="vaVoice"> ' + esc(L('Озвучивать ответы', 'Speak the answers')) + '</label>' +
+      '<div id="vaPkBox" class="va-pk"><b class="va-pkh">' + esc(L('Живой голос (нейросеть, работает без интернета)', 'Neural voice (works offline)', 'Жанды дауыс (нейрожелі, интернетсіз)')) + '</b><div class="va-pick"><select id="vaPk" aria-label="' + esc(L('Живой голос', 'Neural voice', 'Жанды дауыс')) + '"></select><button type="button" class="btn" id="vaPkDel" hidden>' + esc(L('Удалить', 'Remove', 'Жою')) + '</button></div><progress id="vaPkBar" max="1" value="0" hidden></progress><p class="hint va-tip" id="vaPkMsg" role="status"></p></div>' +
       '<div class="va-pick"><select id="vaVoiceSel" aria-label="' + esc(L('Голос', 'Voice', 'Дауыс')) + '"></select><button type="button" class="btn" id="vaTest">' + esc(L('Проверить голос', 'Test voice', 'Дауысты тексеру')) + '</button></div>' +
       '<p class="hint va-tip">' + esc(L('Голоса со звёздочкой ★ звучат живее. В Microsoft Edge их больше всего: откройте приложение в Edge.', 'Voices with a star ★ sound more natural. Microsoft Edge has the most: open the app in Edge.', '★ белгісі бар дауыстар табиғирақ естіледі. Microsoft Edge-те олар көбірек: қосымшаны Edge-те ашыңыз.')) + '</p>';
     document.body.appendChild(btn); document.body.appendChild(panel);
     logEl = $('#vaLog');
-    fillVoices();
+    fillVoices(); fillPiper();
     if (window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged', fillVoices);
-    if (window.WEi18n && WEi18n.onChange) WEi18n.onChange(fillVoices);
+    if (window.WEi18n && WEi18n.onChange) WEi18n.onChange(function () { fillVoices(); fillPiper(); });
+    $('#vaPk').addEventListener('change', function () { pickPiper(this.value); });
+    $('#vaPkDel').addEventListener('click', function () {
+      WEPiper.remove().then(function () { for (var l in { ru: 1, en: 1, kk: 1 }) store('we.voice.piper.' + l, ''); fillPiper(); show(L('Загруженные голоса удалены.', 'Downloaded voices removed.', 'Жүктелген дауыстар жойылды.'), 'bot'); });
+    });
     $('#vaVoiceSel').addEventListener('change', function () { store('we.voice.name.' + lang(), this.value); say(L('Так звучит этот голос.', 'This is how this voice sounds.', 'Бұл дауыс осылай естіледі.')); });
     $('#vaTest').addEventListener('click', function () { say(L('Здравствуйте! Я помощник рейнджера. Сегодня на озере тихо, слышен серый журавль.', 'Hello! I am the ranger assistant. It is quiet on the lake today, a common crane is calling.', 'Сәлеметсіз бе! Мен рейнджер көмекшісімін. Бүгін көл тыныш, сұр тырна дауыстап тұр.')); });
     $('#vaVoice').checked = store('we.voice.mute') !== '1';
-    $('#vaVoice').addEventListener('change', function () { store('we.voice.mute', this.checked ? '0' : '1'); if (!this.checked) try { speechSynthesis.cancel(); } catch (e) { } });
+    $('#vaVoice').addEventListener('change', function () { store('we.voice.mute', this.checked ? '0' : '1'); if (!this.checked) { try { speechSynthesis.cancel(); } catch (e) { } if (window.WEPiper) WEPiper.stop(); } });
     btn.addEventListener('click', function () {
       if (panel.hidden) { panel.hidden = false; setBtn(); if (!on) { if (SR) start(); else show(L('Голосовой ввод в этом браузере не работает. Команды можно печатать.', 'Voice input does not work in this browser. You can type commands.'), 'bot'); } }
       else { panel.hidden = true; off(); }

@@ -648,3 +648,8 @@ body.qs-lock { overflow: hidden; }
 .va-pick select { flex: 1; min-width: 0; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font: inherit; background: transparent; color: inherit; }
 .va-pick .btn { min-height: 40px; padding: 0 12px; }
 .va-tip { margin: 0; font-size: .78rem; }
+.va-pk { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; }
+.va-pk[hidden] { display: none; }
+.va-pkh { font-size: .82rem; }
+.va-pk progress { width: 100%; height: 8px; }
+.va-pk progress[hidden] { display: none; }
