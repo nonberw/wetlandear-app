@@ -13,7 +13,7 @@
   var VARIANT = RELAXED ? 'litert_wasm_internal' : 'litert_wasm_compat_internal';
   var FILES = [
     { url: 'models/birdnet_v2.4_fp16.tflite', size: 25932540 }, { url: 'models/birdnet_v2.4_meta_fp16.tflite', size: 7071440 }, { url: 'models/yamnet.tflite', size: 4126810 },
-    { url: 'models/birdnet_v2.4_labels.txt', size: 259740 }, { url: 'models/yamnet_class_map.csv', size: 14096 }, { url: 'models/head_web.json', size: 62000 }, { url: 'models/head_web.bin', size: 551000 },
+    { url: 'models/birdnet_v2.4_labels.txt', size: 259740 }, { url: 'models/yamnet_class_map.csv', size: 14096 }, { url: 'models/head_web.json', size: 20568 }, { url: 'models/head_web.bin', size: 555008 },
     { url: RT + 'core.js', size: 53482 }, { url: RT + 'wasm-utils.js', size: 1494 },
     { url: RT + 'wasm/' + VARIANT + '.js', size: RELAXED ? 273035 : 273246 }, { url: RT + 'wasm/' + VARIANT + '.wasm', size: RELAXED ? 9367934 : 9334181 }
   ];
@@ -56,6 +56,32 @@
       });
       return chain;
     }).then(refreshReady);
+  }
+  /* A new model version changes only the two small head_web files. Files of an older offline cache that did not change (BirdNET, YAMNet, runtime: about 46 MB)
+     are copied into the new cache, and the small new files are fetched by themselves, so people who already downloaded the offline mode do not have to download it again. */
+  function changes(f) { return /head_web\./.test(f.url); }
+  function migrate() {
+    if (!window.caches) return Promise.resolve(false);
+    return caches.keys().then(function (ks) {
+      var old = ks.filter(function (k) { return k.indexOf('we-offline-') === 0 && k !== CACHE; }); if (!old.length) return false;
+      return caches.open(CACHE).then(function (c) {
+        var same = FILES.filter(function (f) { return !changes(f); }), chain = Promise.resolve();
+        same.forEach(function (f) {
+          chain = chain.then(function () {
+            return c.match(f.url).then(function (hit) {
+              if (hit) return;
+              return old.reduce(function (p, k) { return p.then(function (found) { return found || caches.open(k).then(function (oc) { return oc.match(f.url); }); }); }, Promise.resolve(null)).then(function (resp) { if (resp) return c.put(f.url, resp); });
+            });
+          });
+        });
+        return chain.then(function () { return Promise.all(same.map(function (f) { return c.match(f.url); })); }).then(function (r) {
+          if (!r.every(Boolean)) return false;   // the old download was incomplete: leave it to the normal download button
+          return Promise.all(FILES.filter(changes).map(function (f) {
+            return fetch(f.url, { cache: 'reload' }).then(function (x) { if (!x.ok) throw new Error('http ' + x.status); return x.blob().then(function (b) { return c.put(f.url, new Response(b, { headers: { 'Content-Type': x.headers.get('Content-Type') || 'application/octet-stream' } })); }); });
+          })).then(cleanOld).then(function () { return true; });
+        });
+      });
+    }).catch(function () { return false; });
   }
   function remove() { ready = false; state = null; initP = null; return caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf('we-offline-') === 0; }).map(function (k) { return caches.delete(k); })); }).then(refreshReady); }
   function refreshReady() { return haveAll().then(function (ok) { ready = ok; emit(); return ok; }); }
@@ -198,5 +224,5 @@
     VERSION: VERSION, totalMB: Math.round(TOTAL / 1048576), files: FILES, relaxedSimd: RELAXED, pref: pref, setPref: setPref, download: download, remove: remove, isReady: function () { return ready; }, refresh: refreshReady, init: init, identifyLocal: identifyLocal,
     onChange: function (f) { listeners.push(f); }, supported: function () { return !!(window.caches && window.WebAssembly); }
   };
-  refreshReady();
+  migrate().then(refreshReady);
 })();
