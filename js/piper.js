@@ -1,9 +1,9 @@
 /* WetlandEar App: neural voices (Piper VITS), optional download. The engine (about 29 MB) and one voice (28 to 128 MB) are stored once in the browser
-   (Cache Storage 'we-offline-voice-1'), after that the voice speaks without a network. Voice files come from huggingface.co (diffusionstudio/piper-voices).
+   (Cache Storage 'we-voice-1'), after that the voice speaks without a network. Voice files come from huggingface.co (diffusionstudio/piper-voices).
    Licences: ru Denis and Dmitri CC0; kk ISSAI and Raya CC BY 4.0 (IS2AI Kazakh TTS); en Hi-Fi Captain CC BY-NC-SA 4.0 (NICT). */
 (function () {
   'use strict';
-  var HF = 'https://huggingface.co/diffusionstudio/piper-voices/resolve/main/', CACHE = 'we-offline-voice-1';
+  var HF = 'https://huggingface.co/diffusionstudio/piper-voices/resolve/main/', CACHE = 'we-voice-1';
   var ENGINE = ['ort.wasm.min.js', 'ort-wasm-simd.wasm', 'piper_phonemize.js', 'piper_phonemize.wasm', 'piper_phonemize.data'].map(function (f) { return new URL('js/vendor/piper/' + f, document.baseURI).href; });
   var ENGINE_MB = 29;
   var VOICES = [
