@@ -88,7 +88,9 @@
           if (cancelled) return;
           return call({ cmd: 'say', text: t }).then(function (r) {
             if (cancelled) return;
-            window.__pkms = (window.__pkms || []).concat([r.ms]); var buf = ac.createBuffer(1, r.pcm.length, r.rate); buf.copyToChannel(r.pcm, 0);
+            var pk = 0, i; for (i = 0; i < r.pcm.length; i++) { var a = Math.abs(r.pcm[i]); if (a > pk) pk = a; }
+            if (pk > 0 && pk < .6) { var g = Math.min(.7 / pk, 5); for (i = 0; i < r.pcm.length; i++) r.pcm[i] *= g; }   /* quiet voices (the light Kazakh one) are brought to a normal level */
+            var buf = ac.createBuffer(1, r.pcm.length, r.rate); buf.copyToChannel(r.pcm, 0);
             var src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination);
             var at = Math.max(nextAt, ac.currentTime + .02); src.start(at); nextAt = at + buf.duration + .12; sources.push(src);
             if (!started) { started = true; if (cb.onstart) cb.onstart(); }
