@@ -28,7 +28,7 @@
     <button class="fab" aria-haspopup="dialog" aria-expanded="false" aria-label="Быстрые действия"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     <button data-view="review"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Проверка</span><b id="revCount" hidden>0</b></button>
     <button data-view="log" data-group="log,calendar,map"><svg viewBox="0 0 24 24"><path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v14H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 8h6M9 12h6"/></svg><span>Журнал</span></button>
-    <button data-view="more" data-group="more,data,report,profile,voices,offline,science,manage"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg><span>Ещё</span></button>
+    <button data-view="more" data-group="more,data,report,profile,voices,offline,science,manage,guard"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg><span>Ещё</span></button>
   </nav>
   <div class="lang" role="group" aria-label="Язык"><button data-lang="ru" aria-pressed="true">RU</button><button data-lang="en" aria-pressed="false">EN</button><button data-lang="kk" aria-pressed="false">ҚАЗ</button></div>
   <div class="auth" id="authBox"></div>
@@ -45,6 +45,7 @@
     <button class="more-item" data-go2="data"><b>Станция и данные</b><span>Название и координаты станции, выгрузка журнала, экспорт для GBIF и eBird</span></button>
     <button class="more-item" data-go2="science"><b>Наука и учёт</b><span>Фенология, индикаторные виды, станции и рекордеры</span></button>
     <button class="more-item" data-go2="manage"><b>Управление</b><span>Задачи рейнджерам, эксперт по ссылке, публичные страницы и QR, филиалы</span></button>
+    <button class="more-item" data-go2="guard"><b>Охрана</b><span>Карта нарушений по часам и местам, подсказка патрулю, журнал доказательств</span></button>
     <button class="more-item" data-go2="voices"><b>Голоса и датасеты</b><span>Научить приложение новому голосу, загрузить размеченный датасет, собрать датасет заповедника</span></button>
     <button class="more-item" data-go2="offline"><b>Работа без интернета</b><span>Определение видов прямо в телефоне: BirdNET и модель WetlandEar без сети и без входа</span></button>
     <button class="more-item" data-go2="report"><b>Отчёты</b><span>Утренний отчёт и PDF для заповедника</span></button>
@@ -60,6 +61,7 @@
 <section id="v-science" class="view" aria-labelledby="h-science">
   <h1 id="h-science">Наука и учёт</h1>
   <p class="lead">Фенология, индикаторные виды и состояние станций: то, что нужно для отчётов и для понимания, как живёт болото.</p>
+  <div class="card" id="qualCard"></div>
   <div class="card" id="phenoCard"></div>
   <div class="card" id="indCard"></div>
   <div class="card" id="stnCard"></div>
@@ -72,8 +74,16 @@
   <div class="card" id="taskCard"></div>
   <div class="card" id="expCard"></div>
   <div class="card" id="pubCard"></div>
+  <div class="card" id="netCard"></div>
   <div class="card" id="briefCard"></div>
   <div class="card" id="umbCard"></div>
+</section>
+
+<!-- GUARD -->
+<section id="v-guard" class="view" aria-labelledby="h-guard">
+  <h1 id="h-guard">Охрана</h1>
+  <p class="lead">Когда и где слышны выстрелы и двигатели, подсказка для патруля и журнал доказательств. Тревоги даёт звуковая модель: это подсказки, решает человек.</p>
+  <div class="card" id="guardBody"></div>
 </section>
 
 <!-- VOICES -->
@@ -472,6 +482,10 @@
 <script src="js/pheno.js"></script>
 <script src="js/soundscape.js"></script>
 <script src="js/science.js"></script>
+<script src="js/quality.js"></script>
+<script src="js/guard.js"></script>
+<script src="js/network.js"></script>
+<script src="js/assistant.js"></script>
 <script src="js/vendor/qrcode.js"></script>
 <script src="js/manage.js"></script>
 <script src="js/quick.js"></script>

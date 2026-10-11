@@ -402,7 +402,8 @@
   var queue = [], qi = 0, curClip = null, actx = null, srcNode = null;
   /* active learning: the answers that teach the model most come first (model unsure, around 50%) */
   function uncertainty(d) { var c = d.suggest ? d.suggest.conf : .15; return 1 - Math.abs(2 * c - 1); }
-  function reviewQueue() { return S.get().dets.filter(function (d) { return d.status === 'auto' && d.clip; }).sort(function (a, b) { var u = uncertainty(b) - uncertainty(a); return u || (a.ts < b.ts ? -1 : 1); }); }
+  function pri(d) { return window.WEQuality ? WEQuality.priority(d) : uncertainty(d); }   /* quality.js: unsure events, species with few reviews, possible threats first */
+  function reviewQueue() { return S.get().dets.filter(function (d) { return d.status === 'auto' && d.clip; }).sort(function (a, b) { var u = pri(b) - pri(a); return u || (a.ts < b.ts ? -1 : 1); }); }
   function loadReview() {
     queue = reviewQueue(); qi = 0; refreshChrome(); showReview();
   }
@@ -410,6 +411,7 @@
   function revCands(d) {
     var box = $('#revCands'); if (!box) return;
     var list = d.suggest ? [d.suggest].concat(d.suggest.alts || []) : [];
+    if (window.WEQuality) list = WEQuality.rerank(list);
     if (!list.length) { box.innerHTML = ''; return; }
     box.innerHTML = '<div class="cands">' + list.map(function (s, k) { var pct = Math.round((s.conf || 0) * 100), sid = S.sugId(s);
       return '<div class="cand' + (k === 0 ? ' on' : '') + (s.own ? ' own' : s.head ? ' head' : '') + '" data-id="' + esc(sid) + '" data-n="' + esc(S.sugName(s)) + '" role="radio" aria-checked="' + (k === 0 ? 'true' : 'false') + '" tabindex="0"><span class="cn">' + (s.own ? '★ ' : s.head ? '◆ ' : '') + esc(S.sugName(s)) + (window.WEPheno ? WEPheno.chip(s) : '') + '</span><span class="cb"><i style="--w:' + pct + '%"></i></span><b>' + pct + '%</b><button class="refbtn" data-ref="' + esc(sid) + '" title="' + esc(T('Послушать эталон')) + '">♪</button></div>'; }).join('') + '</div>';
@@ -433,9 +435,9 @@
     var rti = $('#revTyped'); if (rti) { rti.value = ''; delete rti.dataset.id; }
     revCands(d);
     if (d.suggest) {
-      var gid = S.sugId(d.suggest);
-      if (!sel.querySelector('option[value="' + gid.replace(/"/g, '') + '"]')) { var go = document.createElement('option'); go.value = gid; go.textContent = S.sugName(d.suggest); sel.insertBefore(go, sel.lastChild); }
-      sel.value = gid; $('#revMeta').textContent += ' · ' + T('модель предполагает') + ': ' + S.sugName(d.suggest) + ' ' + Math.round(d.suggest.conf * 100) + '%';
+      var sg = (window.WEQuality && WEQuality.pick(d)) || d.suggest, gid = S.sugId(sg);
+      if (!sel.querySelector('option[value="' + gid.replace(/"/g, '') + '"]')) { var go = document.createElement('option'); go.value = gid; go.textContent = S.sugName(sg); sel.insertBefore(go, sel.lastChild); }
+      sel.value = gid; $('#revMeta').textContent += ' · ' + T('модель предполагает') + ': ' + S.sugName(sg) + ' ' + Math.round(sg.conf * 100) + '%';
     }
     S.getClip(d.id).then(function (int16) {
       if (queue[qi] !== d || !int16) return;

@@ -26,6 +26,7 @@
     chat: 'M4 5h16v11H9l-5 4z',
     home: 'M4 11.5L12 5l8 6.5V19a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1z',
     chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+    shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
     user: 'M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 20c0-4 3.6-6 8-6s8 2 8 6'
   };
   /* top: shown as big tiles when the box is empty. sel: element to scroll to; focus: element to focus */
@@ -59,7 +60,10 @@
     { id: 'expert', ico: 'chat', ru: 'Проверка экспертом', en: 'Expert review', dru: 'Ссылка для орнитолога без регистрации', den: 'A link for an ornithologist, no registration', view: 'manage', sel: '#expCard', kw: 'эксперт орнитолог ссылка expert ornithologist link' },
     { id: 'public', ico: 'pin', ru: 'Публичная страница и QR', en: 'Public page and QR', dru: 'Слушайте болото, отчёт для спонсоров', den: 'Listen to the wetland, sponsor report', view: 'manage', sel: '#pubCard', kw: 'публичная страница qr табличка спонсор грант public page placard sponsor grant' },
     { id: 'brief', ico: 'doc', ru: 'Сводка директору', en: 'Brief for the director', dru: 'Раз в неделю в Telegram и на почту', den: 'Weekly in Telegram and by e-mail', view: 'manage', sel: '#briefCard', kw: 'сводка директор неделя почта email brief director weekly mail' },
+    { id: 'network', ico: 'pin', ru: 'Сеть заповедников', en: 'Network of reserves', dru: 'Что слышно у соседей, прилёты рядом', den: 'What neighbours hear, arrivals nearby', view: 'manage', sel: '#netCard', kw: 'сеть заповедники соседи миграция прилет network reserves neighbours migration arrival' },
     { id: 'branches', ico: 'team', ru: 'Филиалы', en: 'Branches', dru: 'Сводка по нескольким заповедникам', den: 'Summary of several reserves', view: 'manage', sel: '#umbCard', kw: 'филиал ведомство парк branch umbrella parks' },
+    { id: 'guard', ico: 'shield', ru: 'Охрана', en: 'Protection', dru: 'Тревоги по часам и местам, подсказка патрулю', den: 'Alerts by hour and place, a hint for patrols', view: 'guard', kw: 'охрана нарушения выстрел браконьер патруль тревоги guard violations poaching patrol alerts' },
+    { id: 'evidence', ico: 'shield', ru: 'Журнал доказательств', en: 'Evidence log', dru: 'Запись, которую нельзя изменить незаметно', den: 'A record that cannot be changed unnoticed', view: 'guard', sel: '#evBox', kw: 'доказательства суд инспекция хеш evidence court inspection hash' },
     { id: 'offline', ico: 'off', ru: 'Работа без интернета', en: 'Work offline', dru: 'Модель прямо в телефоне', den: 'The model right on the phone', view: 'offline', kw: 'офлайн без интернета offline' }
   ];
   var root, input, listEl, gridEl, open = false, items = [], act = 0, opener = null;

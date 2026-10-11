@@ -96,6 +96,11 @@
       "maxDuration": 30,
       "memory": 512,
       "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
+    },
+    "api/evidence.py": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "{lib/**,js/species-ru.js,js/species-sci.js}"
     }
   },
   "crons": [

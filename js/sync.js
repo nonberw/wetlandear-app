@@ -41,16 +41,23 @@
   function recRow(r) { return { id: r.id, name: r.name || null, started_at: r.start || null, duration: r.dur || null, station: r.station || null, lat: r.lat == null ? null : r.lat, lon: r.lon == null ? null : r.lon, idx: r.idx || null }; }
   function detRow(d) {
     return { id: d.id, rec_id: d.recId || null, ts: d.ts, t0: d.t0, t1: d.t1, f_low: d.fLow, f_high: d.fHigh, f_peak: d.fPeak, snr: d.snr, status: d.status, species: d.species || null,
-      suggest: d.suggest || null, sound: d.sound || null, emb: d.emb || null, station: d.station || null, lat: d.lat == null ? null : d.lat, lon: d.lon == null ? null : d.lon, reviewed_at: d.reviewed || null };
+      suggest: d.suggest || null, sound: d.sound || null, emb: d.emb || null, station: d.station || null, lat: d.lat == null ? null : d.lat, lon: d.lon == null ? null : d.lon, reviewed_at: d.reviewed || null, threat_review: d.threatReview || null };
   }
   function detFromRow(r) {
     return { id: r.id, recId: r.rec_id, ts: r.ts, t0: r.t0, t1: r.t1, fLow: r.f_low, fHigh: r.f_high, fPeak: r.f_peak, snr: r.snr, status: r.status, species: r.species, suggest: r.suggest, sound: r.sound, emb: r.emb,
-      station: r.station, lat: r.lat, lon: r.lon, reviewed: r.reviewed_at, clip: 'cloud', uid: r.user_id };
+      station: r.station, lat: r.lat, lon: r.lon, reviewed: r.reviewed_at, clip: 'cloud', uid: r.user_id, threatReview: r.threat_review || undefined };
   }
   function recFromRow(r) { return { id: r.id, name: r.name, start: r.started_at, dur: r.duration, station: r.station, lat: r.lat, lon: r.lon, uid: r.user_id, idx: r.idx || undefined }; }
 
   /* ---------- push ---------- */
   function chunks(a, n) { var o = []; for (var i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; }
+  /* the database may not have the threat_review column yet (migration 009): save the rest without it */
+  function upsertDets(rows) {
+    return sb.from('detections').upsert(rows).then(function (r) {
+      if (r.error && /threat_review/i.test(r.error.message || '')) return sb.from('detections').upsert(rows.map(function (x) { var y = Object.assign({}, x); delete y.threat_review; return y; })).then(check);
+      return check(r);
+    });
+  }
   function pushAll() {
     if (!user) return Promise.resolve();
     var st = S.get(), mine = function (x) { return !x.demo && (!x.uid || x.uid === user.id); }, recs = st.recs.filter(mine).map(recRow), dets = st.dets.filter(mine).map(detRow);
@@ -63,14 +70,14 @@
         return check(r);
       });
     });
-    chunks(dets, 400).forEach(function (c) { p = p.then(function () { return sb.from('detections').upsert(c).then(check); }); });
+    chunks(dets, 400).forEach(function (c) { p = p.then(function () { return upsertDets(c); }); });
     return p.then(function () { maybeAlert(st.dets); });
   }
   function pushDet(d) {
     if (!user || d.demo) return Promise.resolve();
     if (d.uid && d.uid !== user.id) /* a teammate's event: editors may only change the review */
       return sb.from('detections').update({ status: d.status, species: d.species || null, reviewed_at: d.reviewed || null }).eq('id', d.id).then(check).catch(function () { });
-    return sb.from('detections').upsert(detRow(d)).then(check).then(function () { maybeAlert([d]); }).catch(function () { });
+    return upsertDets([detRow(d)]).then(function () { maybeAlert([d]); }).catch(function () { });
   }
   /* instant Telegram alert for a fresh possible gunshot or engine noise; the server re-checks everything */
   function matchesWatch(d) {
@@ -112,6 +119,7 @@
       res[1].data.forEach(function (r) {
         var local = detMap[r.id];
         if (!local) { st.dets.push(detFromRow(r)); added++; return; }
+        if (r.threat_review && !local.threatReview) local.threatReview = r.threat_review;
         if (r.reviewed_at && (!local.reviewed || r.reviewed_at > local.reviewed) && local.status !== r.status) { local.status = r.status; local.species = r.species; local.reviewed = r.reviewed_at; }
       });
       var seenDet = {}, seenRec = {}; res[1].data.forEach(function (r) { seenDet[r.id] = 1; }); res[0].data.forEach(function (r) { seenRec[r.id] = 1; });
